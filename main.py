@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     engine.rootContext().setContextProperty("backend", backend)
 
-    qml_file = str(current_dir / "presentation" / "qml" / "main.qml")
+    qml_file = str(current_dir / "presentation" / "main.qml")
     engine.load(qml_file)
 
     if not engine.rootObjects():
