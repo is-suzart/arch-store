@@ -34,7 +34,10 @@ class FlatpakPackageRepository(PackageRepository):
                 installed_flatpaks = self._get_installed_flatpaks()
                 
                 for hit in hits[:30]:
-                    app_id = hit.get("app_id") or hit.get("id", "")
+                    app_id = hit.get("app_id") or hit.get("id")
+                    if not app_id:
+                        continue
+                        
                     installed = app_id in installed_flatpaks
                     results.append(Package(
                         name=app_id,
@@ -83,7 +86,7 @@ class FlatpakPackageRepository(PackageRepository):
                 installed_flatpaks = self._get_installed_flatpaks()
                 
                 for hit in hits[:12]:
-                    app_id = hit.get("app_id") or hit.get("id", "")
+                    app_id = hit.get("app_id") or hit.get("id")
                     if not app_id:
                         continue
                     installed = app_id in installed_flatpaks
@@ -103,10 +106,16 @@ class FlatpakPackageRepository(PackageRepository):
         return results
 
     def get_install_command(self, pkg_name: str) -> List[str]:
-        return ["flatpak", "install", "--user", "-y", pkg_name]
-
+        # Robust command: ensure flathub remote is added and install from it explicitly
+        return [
+            "sh", "-c", 
+            f"flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo && "
+            f"flatpak install --user -y flathub '{pkg_name}'"
+        ]
 
     def get_uninstall_command(self, pkg_name: str) -> List[str]:
+        # Try to uninstall from user first, then system (if possible without sudo, though system usually needs it)
+        # But for consistency with install, we prioritize --user
         return ["flatpak", "uninstall", "--user", "-y", pkg_name]
 
     def get_updatable(self) -> List[Package]:

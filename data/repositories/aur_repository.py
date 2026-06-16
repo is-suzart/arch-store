@@ -64,10 +64,10 @@ class AurPackageRepository(PackageRepository):
         return []
 
     def get_install_command(self, pkg_name: str) -> List[str]:
-        return ["yay", "--sudo", "sudo", "-A", "--noconfirm", "-S", pkg_name]
+        return ["yay", "--sudoflags", "-A", "--noconfirm", "-S", pkg_name]
 
     def get_uninstall_command(self, pkg_name: str) -> List[str]:
-        return ["yay", "--sudo", "sudo", "-A", "--noconfirm", "-Rns", pkg_name]
+        return ["yay", "--sudoflags", "-A", "--noconfirm", "-Rns", pkg_name]
 
     def get_updatable(self) -> List[Package]:
         if not self.alpm_repository:

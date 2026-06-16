@@ -255,11 +255,12 @@ class Backend(QObject):
         if category == "pacman":
             cmd = ["sudo", "-A", "pacman", "-Syu", "--noconfirm"]
         elif category == "flatpak":
-            cmd = ["flatpak", "update", "-y"]
+            # Update both system and user, non-interactively
+            cmd = ["flatpak", "update", "-y", "--noninteractive"]
         elif category == "aur":
             cmd = ["yay", "--sudo", "sudo", "-A", "-Sua", "--noconfirm"]
         elif category == "all":
-            cmd = ["sh", "-c", "sudo -A pacman -Syu --noconfirm && yay --sudo sudo -A -Sua --noconfirm && flatpak update -y"]
+            cmd = ["sh", "-c", "sudo -A pacman -Syu --noconfirm && yay --sudo sudo -A -Sua --noconfirm && flatpak update -y --noninteractive"]
         else:
             self.logReceived.emit("Unknown update category.")
             return
@@ -313,7 +314,7 @@ class Backend(QObject):
             self.logReceived.emit("Another operation is already running!")
             return
 
-        cmd = ["sh", "-c", "sudo -A pacman -Scc --noconfirm && flatpak uninstall --unused -y && appstreamcli refresh-cache --user"]
+        cmd = ["sh", "-c", "sudo -A pacman -Scc --noconfirm && flatpak uninstall --unused -y --noninteractive && appstreamcli refresh-cache --user"]
         self.logReceived.emit("Iniciando limpeza de cache...")
         self.worker = InstallWorker(cmd)
         self.worker.log_received.connect(self.logReceived.emit)
