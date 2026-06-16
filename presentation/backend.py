@@ -330,3 +330,41 @@ class Backend(QObject):
         except Exception as e:
             print(f"Error in getGroupPackages: {e}")
             return []
+
+    @Slot(result=list)
+    def getAlpmGroups(self):
+        try:
+            alpm_repo = self.search_usecase.alpm_repo
+            alpm_repo._refresh_localdb()
+            groups = set()
+            for db in alpm_repo.syncdbs:
+                for pkg in db.pkgcache:
+                    groups.update(pkg.groups)
+            
+            all_groups = sorted([g for g in groups if g])
+            
+            if not all_groups:
+                all_groups = ["gnome", "kde-system", "xfce4", "qt6", "xorg"]
+                
+            labels = {
+                "gnome": "Ambiente GNOME",
+                "kde-system": "Ambiente KDE",
+                "xfce4": "Ambiente XFCE",
+                "qt6": "Desenvolvimento Qt6",
+                "base-devel": "Desenvolvimento Base",
+                "xorg": "Servidor Xorg",
+                "mate": "Ambiente MATE",
+                "lxqt": "Ambiente LXQt",
+                "deepin": "Ambiente Deepin"
+            }
+            
+            return [{"name": g, "label": labels.get(g, g)} for g in all_groups]
+        except Exception as e:
+            print(f"Error getting ALPM groups: {e}")
+            return [
+                {"name": "gnome", "label": "Ambiente GNOME"},
+                {"name": "kde-system", "label": "Ambiente KDE"},
+                {"name": "xfce4", "label": "Ambiente XFCE"},
+                {"name": "qt6", "label": "Desenvolvimento Qt6"},
+                {"name": "xorg", "label": "Servidor Xorg"}
+            ]

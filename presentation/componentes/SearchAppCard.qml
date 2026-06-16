@@ -12,6 +12,7 @@ MochaDS.Card {
 
     MouseArea {
         id: cardMouseArea
+        z: -1
         anchors.fill: parent
         visible: cardRoot.appData ? !cardRoot.appData.installed : false
         onClicked: {

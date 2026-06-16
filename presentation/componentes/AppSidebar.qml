@@ -6,12 +6,13 @@ import QtQuick.Layouts 1.15
 MochaDS.Sidebar {
     id: rootSidebar
 
-    anchors.verticalCenter: parent.verticalCenter
-    variant: "floated"
-    expandedWidth: 285
-
     // Expose the search text field's text property for external access (e.g. main.qml's searchFor)
     property alias searchText: headerSearchField.text
+
+    anchors.verticalCenter: parent.verticalCenter
+    height: parent.fill
+    variant: "floated"
+    expandedWidth: 285
 
     MochaDS.SidebarHeader {
         height: 130
@@ -122,39 +123,21 @@ MochaDS.Sidebar {
         MochaDS.SidebarItem {
             icon: "layers"
             label: "Grupos Pacman"
-            
-            MochaDS.SidebarItem {
-                icon: "monitor"
-                label: "GNOME"
-                isActive: window.currentPage === "group_gnome"
-                onClicked: {
-                    window.loadGroup("gnome", "Ambiente GNOME");
+
+            Repeater {
+                model: (typeof backend !== "undefined" && backend) ? backend.getAlpmGroups() : []
+
+                delegate: MochaDS.SidebarItem {
+                    icon: modelData.name === "qt6" ? "code" : "monitor"
+                    label: modelData.label
+                    isActive: window.currentPage === "group_" + modelData.name
+                    onClicked: {
+                        window.loadGroup(modelData.name, modelData.label);
+                    }
                 }
+
             }
-            MochaDS.SidebarItem {
-                icon: "monitor"
-                label: "KDE"
-                isActive: window.currentPage === "group_kde-system"
-                onClicked: {
-                    window.loadGroup("kde-system", "Ambiente KDE");
-                }
-            }
-            MochaDS.SidebarItem {
-                icon: "monitor"
-                label: "XFCE"
-                isActive: window.currentPage === "group_xfce4"
-                onClicked: {
-                    window.loadGroup("xfce4", "Ambiente XFCE");
-                }
-            }
-            MochaDS.SidebarItem {
-                icon: "code"
-                label: "Qt6"
-                isActive: window.currentPage === "group_qt6"
-                onClicked: {
-                    window.loadGroup("qt6", "Desenvolvimento Qt6");
-                }
-            }
+
         }
 
     }
@@ -179,6 +162,9 @@ MochaDS.Sidebar {
                     window.currentPage = "settings";
                 }
             }
+
         }
+
     }
+
 }
