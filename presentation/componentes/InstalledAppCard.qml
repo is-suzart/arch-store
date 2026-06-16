@@ -10,6 +10,19 @@ MochaDS.Card {
 
     signal uninstallClicked()
 
+    MouseArea {
+        id: cardMouseArea
+        anchors.fill: parent
+        onClicked: {
+            if (cardRoot.appData) {
+                window.toggleBatchUninstallApp(cardRoot.appData);
+            }
+        }
+        Component.onCompleted: {
+            cardMouseArea.parent = cardRoot;
+        }
+    }
+
     title: appData ? appData.title : ""
     subtitle: appData ? "Versão: " + appData.version : ""
     variant: "default"
@@ -23,12 +36,53 @@ MochaDS.Card {
                 anchors.leftMargin: MochaDS.Theme.spacing.lg
                 anchors.rightMargin: MochaDS.Theme.spacing.lg
 
-                AppIcon {
+                Item {
                     width: 40
                     height: 40
                     Layout.alignment: Qt.AlignVCenter
-                    iconSource: (cardRoot.appData && cardRoot.appData.icon) ? cardRoot.appData.icon : ""
-                    packageName: (cardRoot.appData && cardRoot.appData.name) ? cardRoot.appData.name : ""
+
+                    AppIcon {
+                        anchors.fill: parent
+                        iconSource: (cardRoot.appData && cardRoot.appData.icon) ? cardRoot.appData.icon : ""
+                        packageName: (cardRoot.appData && cardRoot.appData.name) ? cardRoot.appData.name : ""
+                    }
+
+                    // Glassmorphic selection circle indicator (danger themed for uninstallation)
+                    Rectangle {
+                        id: selectionIndicator
+                        width: 16
+                        height: 16
+                        radius: 8
+                        color: isSelected ? MochaDS.Theme.colors.danger : MochaDS.Theme.colors.surface0
+                        border.color: isSelected ? "transparent" : MochaDS.Theme.colors.overlay0
+                        border.width: 1.5
+                        // Positioned overlapping top-left of the icon
+                        x: -5
+                        y: -5
+
+                        // Inner dot for selected state
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 6
+                            height: 6
+                            radius: 3
+                            color: MochaDS.Theme.colors.base
+                            visible: parent.isSelected
+                        }
+
+                        readonly property bool isSelected: (cardRoot.appData && cardRoot.appData.name) ? window.isBatchUninstallAppSelected(cardRoot.appData.name) : false
+
+                        MouseArea {
+                            anchors.fill: parent
+                            // Extra click margins for better UX
+                            anchors.margins: -8
+                            onClicked: {
+                                if (cardRoot.appData) {
+                                    window.toggleBatchUninstallApp(cardRoot.appData);
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Item {
@@ -51,13 +105,14 @@ MochaDS.Card {
             spacing: 8
 
             Text {
-                text: cardRoot.appData ? cardRoot.appData.name : ""
+                text: cardRoot.appData ? (cardRoot.appData.title || cardRoot.appData.name) : ""
                 width: parent.width
                 font.family: MochaDS.Theme.typography.family
-                font.pixelSize: MochaDS.Theme.typography.sizeH1
+                font.pixelSize: MochaDS.Theme.typography.sizeXl
                 color: MochaDS.Theme.colors.text
                 wrapMode: Text.Wrap
             }
+
 
             Text {
                 text: cardRoot.appData ? cardRoot.appData.desc : ""
@@ -69,29 +124,38 @@ MochaDS.Card {
                 color: MochaDS.Theme.colors.subtext0
             }
 
-            RowLayout {
-                spacing: 8
+            Item {
                 width: parent.width
-                height: implicitHeight
+                height: footer.height + 24
 
-                Text {
-                    text: cardRoot.appData ? cardRoot.appData.version : ""
-                    font.family: MochaDS.Theme.typography.family
-                    font.pixelSize: MochaDS.Theme.typography.sizeSm
-                    color: MochaDS.Theme.colors.subtext1
-                }
+                RowLayout {
+                    id: footer
 
-                Item {
-                    Layout.fillWidth: true
-                }
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+                    width: parent.width
+                    height: implicitHeight
 
-                MochaDS.Button {
-                    text: "Desinstalar"
-                    variant: "danger"
-                    size: "sm"
-                    onClicked: {
-                        cardRoot.uninstallClicked();
+                    Text {
+                        text: cardRoot.appData ? cardRoot.appData.version : ""
+                        font.family: MochaDS.Theme.typography.family
+                        font.pixelSize: MochaDS.Theme.typography.sizeSm
+                        color: MochaDS.Theme.colors.subtext1
                     }
+
+                    Item {
+                        Layout.fillWidth: true
+                    }
+
+                    MochaDS.Button {
+                        text: "Desinstalar"
+                        variant: "danger"
+                        size: "sm"
+                        onClicked: {
+                            cardRoot.uninstallClicked();
+                        }
+                    }
+
                 }
 
             }

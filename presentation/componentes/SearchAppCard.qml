@@ -1,6 +1,7 @@
 import MochaDS 1.0 as MochaDS
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
 
 MochaDS.Card {
     id: cardRoot
@@ -9,41 +10,159 @@ MochaDS.Card {
 
     signal detailsClicked()
 
+    MouseArea {
+        id: cardMouseArea
+        anchors.fill: parent
+        visible: cardRoot.appData ? !cardRoot.appData.installed : false
+        onClicked: {
+            if (cardRoot.appData) {
+                window.toggleBatchApp(cardRoot.appData);
+            }
+        }
+        Component.onCompleted: {
+            cardMouseArea.parent = cardRoot;
+        }
+    }
+
     title: appData ? appData.title : ""
-    subtitle: appData ? appData.version : ""
+    subtitle: appData ? "Versão: " + appData.version : ""
     variant: "default"
+    header: [
+        Item {
+            width: cardRoot.width
+            height: 64 // 40px (altura do ícone) + 16px (8px de padding superior e inferior)
 
-    Column {
-        width: parent.width
-        spacing: 8
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: MochaDS.Theme.spacing.lg
+                anchors.rightMargin: MochaDS.Theme.spacing.lg
 
-        Row {
+                Item {
+                    width: 40
+                    height: 40
+                    Layout.alignment: Qt.AlignVCenter
+
+                    AppIcon {
+                        anchors.fill: parent
+                        iconSource: (cardRoot.appData && cardRoot.appData.icon) ? cardRoot.appData.icon : ""
+                        packageName: (cardRoot.appData && cardRoot.appData.name) ? cardRoot.appData.name : ""
+                    }
+
+                    // Glassmorphic selection circle indicator
+                    Rectangle {
+                        id: selectionIndicator
+                        width: 16
+                        height: 16
+                        radius: 8
+                        color: isSelected ? MochaDS.Theme.colors.primary : MochaDS.Theme.colors.surface0
+                        border.color: isSelected ? "transparent" : MochaDS.Theme.colors.overlay0
+                        border.width: 1.5
+                        // Positioned overlapping top-left of the icon
+                        x: -5
+                        y: -5
+                        visible: cardRoot.appData ? !cardRoot.appData.installed : false
+
+                        // Inner dot for selected state
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 6
+                            height: 6
+                            radius: 3
+                            color: MochaDS.Theme.colors.base
+                            visible: parent.isSelected
+                        }
+
+                        readonly property bool isSelected: (cardRoot.appData && cardRoot.appData.name) ? window.isBatchAppSelected(cardRoot.appData.name) : false
+
+                        MouseArea {
+                            anchors.fill: parent
+                            // Extra click margins for better UX
+                            anchors.margins: -8
+                            onClicked: {
+                                if (cardRoot.appData) {
+                                    window.toggleBatchApp(cardRoot.appData);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                }
+
+                MochaDS.Badge {
+                    text: (cardRoot.appData && cardRoot.appData.type) ? cardRoot.appData.type.toUpperCase() : ""
+                    variant: (cardRoot.appData && cardRoot.appData.type === "flatpak") ? "secondary" : ((cardRoot.appData && cardRoot.appData.type === "aur") ? "warning" : "primary")
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                MochaDS.Badge {
+                    text: "Instalado"
+                    variant: "success"
+                    visible: cardRoot.appData ? cardRoot.appData.installed : false
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+            }
+
+        }
+    ]
+    content: [
+        Column {
             width: parent.width
             spacing: 8
 
-            AppIcon {
-                width: 48
-                height: 48
-                iconSource: (cardRoot.appData && cardRoot.appData.icon) ? cardRoot.appData.icon : ""
-                packageName: (cardRoot.appData && cardRoot.appData.name) ? cardRoot.appData.name : ""
+            Text {
+                text: cardRoot.appData ? (cardRoot.appData.title || cardRoot.appData.name) : ""
+                width: parent.width
+                font.family: MochaDS.Theme.typography.family
+                font.pixelSize: MochaDS.Theme.typography.sizeXl
+                color: MochaDS.Theme.colors.text
+                wrapMode: Text.Wrap
             }
 
-            Column {
-                spacing: 4
-                anchors.verticalCenter: parent.verticalCenter
 
-                Row {
-                    spacing: 4
+            Text {
+                text: cardRoot.appData ? cardRoot.appData.desc : ""
+                width: parent.width
+                elide: Text.ElideRight
+                maximumLineCount: 1
+                font.family: MochaDS.Theme.typography.family
+                font.pixelSize: MochaDS.Theme.typography.sizeSm
+                color: MochaDS.Theme.colors.subtext0
+            }
 
-                    MochaDS.Badge {
-                        text: (cardRoot.appData && cardRoot.appData.type) ? cardRoot.appData.type.toUpperCase() : ""
-                        variant: (cardRoot.appData && cardRoot.appData.type === "flatpak") ? "secondary" : ((cardRoot.appData && cardRoot.appData.type === "aur") ? "warning" : "primary")
+            Item {
+                width: parent.width
+                height: footer.height + 24
+
+                RowLayout {
+                    id: footer
+
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+                    width: parent.width
+                    height: implicitHeight
+
+                    Text {
+                        text: cardRoot.appData ? cardRoot.appData.version : ""
+                        font.family: MochaDS.Theme.typography.family
+                        font.pixelSize: MochaDS.Theme.typography.sizeSm
+                        color: MochaDS.Theme.colors.subtext1
                     }
 
-                    MochaDS.Badge {
-                        text: "Instalado"
-                        variant: "success"
-                        visible: cardRoot.appData ? cardRoot.appData.installed : false
+                    Item {
+                        Layout.fillWidth: true
+                    }
+
+                    MochaDS.Button {
+                        text: "Mais Detalhes"
+                        variant: "tonal"
+                        size: "sm"
+                        onClicked: {
+                            cardRoot.detailsClicked();
+                        }
                     }
 
                 }
@@ -51,33 +170,5 @@ MochaDS.Card {
             }
 
         }
-
-        Text {
-            text: cardRoot.appData ? cardRoot.appData.desc : ""
-            width: parent.width
-            elide: Text.ElideRight
-            maximumLineCount: 2
-            font.family: MochaDS.Theme.typography.family
-            font.pixelSize: MochaDS.Theme.typography.sizeSm
-            color: MochaDS.Theme.colors.subtext1
-            wrapMode: Text.Wrap
-        }
-
-        Item {
-            width: 1
-            height: 8
-        }
-
-        MochaDS.Button {
-            text: "Mais Detalhes"
-            variant: "outline"
-            size: "sm"
-            anchors.horizontalCenter: parent.horizontalCenter
-            onClicked: {
-                cardRoot.detailsClicked();
-            }
-        }
-
-    }
-
+    ]
 }

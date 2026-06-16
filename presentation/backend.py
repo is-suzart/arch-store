@@ -1,4 +1,7 @@
 import subprocess
+import json
+import os
+from pathlib import Path
 from PySide6.QtCore import QObject, Slot, Signal, QThread, QTimer
 
 class SearchWorker(QThread):
@@ -28,13 +31,21 @@ class InstallWorker(QThread):
 
     def run(self):
         try:
+            import os
+            env = os.environ.copy()
+            current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            askpass_path = os.path.join(current_dir, "askpass.sh")
+            env["SUDO_ASKPASS"] = askpass_path
+            env["SSH_ASKPASS"] = askpass_path
+            
             # We run the process capturing output and streaming it line-by-line
             process = subprocess.Popen(
                 self.cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
-                bufsize=1
+                bufsize=1,
+                env=env
             )
             
             while True:
@@ -56,14 +67,41 @@ class Backend(QObject):
     searchResultsReady = Signal(list, arguments=['results'])
     searchLoadingChanged = Signal(bool, arguments=['loading'])
 
-    def __init__(self, search_usecase, get_installed_usecase, install_usecase, uninstall_usecase):
+    def __init__(self, search_usecase, get_installed_usecase, install_usecase, uninstall_usecase, get_featured_usecase, get_popular_usecase, get_gaming_usecase, get_updatable_usecase, appstream_repo=None, get_group_packages_usecase=None):
         super().__init__()
+        self.get_group_packages_usecase = get_group_packages_usecase
         self.search_usecase = search_usecase
         self.get_installed_usecase = get_installed_usecase
         self.install_usecase = install_usecase
         self.uninstall_usecase = uninstall_usecase
+        self.get_featured_usecase = get_featured_usecase
+        self.get_popular_usecase = get_popular_usecase
+        self.get_gaming_usecase = get_gaming_usecase
+        self.get_updatable_usecase = get_updatable_usecase
+        self.appstream_repo = appstream_repo
         self.worker = None
         self.search_worker = None
+
+        # Config files setup
+        config_dir = Path.home() / ".config" / "arch-store"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        self.config_path = config_dir / "config.json"
+        
+        self.config = {
+            "theme_flavor": "mocha",
+            "enable_aur": True,
+            "enable_flatpak": True,
+            "check_updates_startup": True
+        }
+        
+        if self.config_path.exists():
+            try:
+                with open(self.config_path, "r", encoding="utf-8") as f:
+                    self.config.update(json.load(f))
+            except Exception as e:
+                print(f"Error loading config: {e}")
+                
+        self._sync_usecases()
 
         # Debounce timer setup
         self.search_timer = QTimer(self)
@@ -118,6 +156,53 @@ class Backend(QObject):
         packages = self.get_installed_usecase.execute()
         return [pkg.to_dict() for pkg in packages]
 
+    @Slot(result=list)
+    def getFeaturedPackages(self):
+        try:
+            packages = self.get_featured_usecase.execute()
+            return [pkg.to_dict() for pkg in packages]
+        except Exception as e:
+            print(f"Error getting featured packages: {e}")
+            return []
+
+    @Slot(result=list)
+    def getPopularPackages(self):
+        try:
+            packages = self.get_popular_usecase.execute()
+            return [pkg.to_dict() for pkg in packages]
+        except Exception as e:
+            print(f"Error getting popular packages: {e}")
+            return []
+
+    @Slot(result=list)
+    def getGamingPackages(self):
+        try:
+            packages = self.get_gaming_usecase.execute()
+            return [pkg.to_dict() for pkg in packages]
+        except Exception as e:
+            print(f"Error getting gaming packages: {e}")
+            return []
+
+    @Slot(result=list)
+    def getHeroApps(self):
+        try:
+            if self.appstream_repo is None:
+                return []
+            return self.appstream_repo.get_hero_apps()
+        except Exception as e:
+            print(f"Error getting hero apps: {e}")
+            return []
+
+    @Slot(str, str, result=str)
+    def getAppHeroImage(self, name, pkg_type):
+        try:
+            if self.appstream_repo is None:
+                return ""
+            return self.appstream_repo.get_app_hero_image(name, pkg_type)
+        except Exception as e:
+            print(f"Error getting hero image for {pkg_type}/{name}: {e}")
+            return ""
+
     @Slot(str, str)
     def installPackage(self, pkg_type, pkg_name):
         if self.worker and self.worker.isRunning():
@@ -152,5 +237,96 @@ class Backend(QObject):
         self.worker.finished.connect(self.on_worker_finished)
         self.worker.start()
 
+    @Slot(result=list)
+    def getUpdatablePackages(self):
+        try:
+            packages = self.get_updatable_usecase.execute()
+            return [pkg.to_dict() for pkg in packages]
+        except Exception as e:
+            print(f"Error getting updatable packages: {e}")
+            return []
+
+    @Slot(str)
+    def updateCategory(self, category):
+        if self.worker and self.worker.isRunning():
+            self.logReceived.emit("Another operation is already running!")
+            return
+
+        if category == "pacman":
+            cmd = ["sudo", "-A", "pacman", "-Syu", "--noconfirm"]
+        elif category == "flatpak":
+            cmd = ["flatpak", "update", "-y"]
+        elif category == "aur":
+            cmd = ["yay", "--sudo", "sudo", "-A", "-Sua", "--noconfirm"]
+        elif category == "all":
+            cmd = ["sh", "-c", "sudo -A pacman -Syu --noconfirm && yay --sudo sudo -A -Sua --noconfirm && flatpak update -y"]
+        else:
+            self.logReceived.emit("Unknown update category.")
+            return
+
+        self.logReceived.emit(f"Starting system update for: {category.upper()}...")
+        self.worker = InstallWorker(cmd)
+        self.worker.log_received.connect(self.logReceived.emit)
+        self.worker.finished.connect(self.on_worker_finished)
+        self.worker.start()
+
     def on_worker_finished(self, success):
         self.actionFinished.emit(success)
+
+    def _save_config(self):
+        try:
+            with open(self.config_path, "w", encoding="utf-8") as f:
+                json.dump(self.config, f, indent=4)
+        except Exception as e:
+            print(f"Error saving config: {e}")
+
+    def _sync_usecases(self):
+        self.search_usecase.enable_aur = self.config.get("enable_aur", True)
+        self.search_usecase.enable_flatpak = self.config.get("enable_flatpak", True)
+        self.get_installed_usecase.enable_flatpak = self.config.get("enable_flatpak", True)
+        self.get_updatable_usecase.enable_aur = self.config.get("enable_aur", True)
+        self.get_updatable_usecase.enable_flatpak = self.config.get("enable_flatpak", True)
+
+    @Slot(str, result=bool)
+    def getConfigBool(self, key):
+        return bool(self.config.get(key, True))
+
+    @Slot(str, result=str)
+    def getConfigStr(self, key):
+        return str(self.config.get(key, "mocha"))
+
+    @Slot(str, bool)
+    def setConfigBool(self, key, value):
+        self.config[key] = bool(value)
+        self._save_config()
+        self._sync_usecases()
+
+    @Slot(str, str)
+    def setConfigStr(self, key, value):
+        self.config[key] = str(value)
+        self._save_config()
+        self._sync_usecases()
+
+    @Slot()
+    def clearCache(self):
+        if self.worker and self.worker.isRunning():
+            self.logReceived.emit("Another operation is already running!")
+            return
+
+        cmd = ["sh", "-c", "sudo -A pacman -Scc --noconfirm && flatpak uninstall --unused -y && appstreamcli refresh-cache --user"]
+        self.logReceived.emit("Iniciando limpeza de cache...")
+        self.worker = InstallWorker(cmd)
+        self.worker.log_received.connect(self.logReceived.emit)
+        self.worker.finished.connect(self.on_worker_finished)
+        self.worker.start()
+
+    @Slot(str, result=list)
+    def getGroupPackages(self, group_name):
+        try:
+            if not self.get_group_packages_usecase:
+                return []
+            packages = self.get_group_packages_usecase.execute(group_name)
+            return [pkg.to_dict() for pkg in packages]
+        except Exception as e:
+            print(f"Error in getGroupPackages: {e}")
+            return []

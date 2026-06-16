@@ -18,3 +18,10 @@ class PackageRepository(ABC):
     @abstractmethod
     def get_uninstall_command(self, pkg_name: str) -> List[str]:
         pass
+
+
+class FeaturedRepository(ABC):
+    @abstractmethod
+    def get_featured_packages(self) -> List[Package]:
+        pass
+

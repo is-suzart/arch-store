@@ -7,6 +7,8 @@ class SearchPackagesUseCase:
         self.alpm_repo = alpm_repo
         self.aur_repo = aur_repo
         self.flatpak_repo = flatpak_repo
+        self.enable_aur = True
+        self.enable_flatpak = True
 
     def execute(self, query: str) -> List[Package]:
         if not query:
@@ -21,13 +23,14 @@ class SearchPackagesUseCase:
         pacman_names = {pkg.name for pkg in alpm_results}
         
         # 2. Search AUR
-        aur_results = self.aur_repo.search(query)
-        # Filter duplicates where name matches pacman packages
-        aur_filtered = [pkg for pkg in aur_results if pkg.name not in pacman_names]
-        results.extend(aur_filtered)
+        if self.enable_aur:
+            aur_results = self.aur_repo.search(query)
+            aur_filtered = [pkg for pkg in aur_results if pkg.name not in pacman_names]
+            results.extend(aur_filtered)
         
         # 3. Search Flatpak
-        flatpak_results = self.flatpak_repo.search(query)
-        results.extend(flatpak_results)
+        if self.enable_flatpak:
+            flatpak_results = self.flatpak_repo.search(query)
+            results.extend(flatpak_results)
         
         return results

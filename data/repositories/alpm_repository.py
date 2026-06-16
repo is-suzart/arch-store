@@ -17,6 +17,13 @@ class AlpmPackageRepository(PackageRepository):
             except Exception:
                 pass
 
+    def _refresh_localdb(self):
+        try:
+            self.handle = pyalpm.Handle("/", "/var/lib/pacman")
+            self.localdb = self.handle.get_localdb()
+        except Exception as e:
+            print(f"Error refreshing ALPM database: {e}")
+
     def _get_icon_from_desktop(self, file_path: str) -> str:
         try:
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -28,6 +35,7 @@ class AlpmPackageRepository(PackageRepository):
         return ""
 
     def get_installed_icon(self, pkg_name: str) -> str:
+        self._refresh_localdb()
         try:
             pkg = self.localdb.get_pkg(pkg_name)
             if pkg:
@@ -40,12 +48,14 @@ class AlpmPackageRepository(PackageRepository):
         return ""
 
     def is_installed(self, pkg_name: str) -> bool:
+        self._refresh_localdb()
         try:
             return self.localdb.get_pkg(pkg_name) is not None
         except Exception:
             return False
 
     def get_installed_version(self, pkg_name: str) -> str:
+        self._refresh_localdb()
         try:
             pkg = self.localdb.get_pkg(pkg_name)
             return pkg.version if pkg else ""
@@ -53,6 +63,7 @@ class AlpmPackageRepository(PackageRepository):
             return ""
 
     def search(self, query: str) -> List[Package]:
+        self._refresh_localdb()
         if not query:
             return []
             
@@ -86,6 +97,7 @@ class AlpmPackageRepository(PackageRepository):
         return results
 
     def get_installed(self) -> List[Package]:
+        self._refresh_localdb()
         installed = []
         try:
             for pkg in self.localdb.pkgcache:
@@ -112,8 +124,61 @@ class AlpmPackageRepository(PackageRepository):
             print(f"Error loading installed pacman: {e}")
         return installed
 
+
     def get_install_command(self, pkg_name: str) -> List[str]:
-        return ["pkexec", "pacman", "-S", "--noconfirm", pkg_name]
+        return ["sudo", "-A", "pacman", "-S", "--noconfirm", pkg_name]
 
     def get_uninstall_command(self, pkg_name: str) -> List[str]:
-        return ["pkexec", "pacman", "-Rns", "--noconfirm", pkg_name]
+        return ["sudo", "-A", "pacman", "-Rns", "--noconfirm", pkg_name]
+
+    def get_updatable(self) -> List[Package]:
+        self._refresh_localdb()
+        updates = []
+        for pkg in self.localdb.pkgcache:
+            for db in self.syncdbs:
+                sync_pkg = db.get_pkg(pkg.name)
+                if sync_pkg:
+                    if pyalpm.vercmp(pkg.version, sync_pkg.version) < 0:
+                        icon_name = self.get_installed_icon(pkg.name)
+                        updates.append(Package(
+                            name=pkg.name,
+                            title=pkg.name,
+                            desc=pkg.desc or "",
+                            version=sync_pkg.version,
+                            type="pacman",
+                            installed=True,
+                            installed_version=pkg.version,
+                            icon=icon_name
+                        ))
+                        break
+        return updates
+
+    def get_packages_by_group(self, group_name: str) -> List[Package]:
+        self._refresh_localdb()
+        results = []
+        seen_names = set()
+        
+        for db in self.syncdbs:
+            try:
+                for pkg in db.pkgcache:
+                    if group_name in pkg.groups:
+                        if pkg.name in seen_names:
+                            continue
+                        seen_names.add(pkg.name)
+                        
+                        installed = self.is_installed(pkg.name)
+                        icon_name = self.get_installed_icon(pkg.name) if installed else ""
+                        
+                        results.append(Package(
+                            name=pkg.name,
+                            title=pkg.name,
+                            desc=pkg.desc or "",
+                            version=pkg.version,
+                            type="pacman",
+                            installed=installed,
+                            installed_version=self.get_installed_version(pkg.name) if installed else "",
+                            icon=icon_name
+                        ))
+            except Exception as e:
+                print(f"Error getting group {group_name} from ALPM: {e}")
+        return results

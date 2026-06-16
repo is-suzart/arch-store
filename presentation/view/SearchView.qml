@@ -1,8 +1,8 @@
+import "../componentes"
 import MochaDS 1.0 as MochaDS
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
-import "../componentes"
 
 Item {
     id: root
@@ -12,49 +12,14 @@ Item {
     property bool loading: window.searchLoading
 
     onQueryChanged: {
-        if (searchInputField.text !== query) {
+        if (searchInputField.text !== query)
             searchInputField.text = query;
-        }
+
     }
 
     ColumnLayout {
         anchors.fill: parent
         spacing: 16
-
-        // Search input layout
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            MochaDS.TextField {
-                id: searchInputField
-
-                placeholder: "Pesquise por nome, descrição ou categoria..."
-                text: root.query
-                iconLeft: "search"
-                Layout.fillWidth: true
-                onTextChanged: {
-                    if (activeFocus) {
-                        window.searchQuery = text;
-                        window.triggerSearch(text, false);
-                    }
-                }
-                onAccepted: {
-                    window.searchQuery = text;
-                    window.triggerSearch(text, true);
-                }
-            }
-
-            MochaDS.Button {
-                text: "Buscar"
-                variant: "primary"
-                onClicked: {
-                    window.searchQuery = searchInputField.text;
-                    window.triggerSearch(window.searchQuery, true);
-                }
-            }
-
-        }
 
         // Search Loading
         Item {
@@ -91,7 +56,6 @@ Item {
                     delegate: SearchAppCard {
                         width: Math.max(280, (parent.width - MochaDS.Theme.spacing.lg * 3) / 3)
                         appData: modelData
-
                         onDetailsClicked: {
                             window.selectedApp = modelData;
                             window.appDetailModal.open = true;
@@ -102,10 +66,16 @@ Item {
 
             }
 
-            ScrollBar.vertical: ScrollBar {
+            MochaDS.ScrollBar {
+                flickable: searchFlickable
+                orientation: "vertical"
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
             }
 
         }
 
     }
+
 }
