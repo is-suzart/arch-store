@@ -67,8 +67,9 @@ class Backend(QObject):
     searchResultsReady = Signal(list, arguments=['results'])
     searchLoadingChanged = Signal(bool, arguments=['loading'])
 
-    def __init__(self, search_usecase, get_installed_usecase, install_usecase, uninstall_usecase, get_featured_usecase, get_popular_usecase, get_gaming_usecase, get_updatable_usecase, appstream_repo=None, get_group_packages_usecase=None):
+    def __init__(self, search_usecase, get_installed_usecase, install_usecase, uninstall_usecase, get_featured_usecase, get_popular_usecase, get_gaming_usecase, get_updatable_usecase, appstream_repo=None, get_group_packages_usecase=None, launch_usecase=None):
         super().__init__()
+        self.launch_usecase = launch_usecase
         self.get_group_packages_usecase = get_group_packages_usecase
         self.search_usecase = search_usecase
         self.get_installed_usecase = get_installed_usecase
@@ -270,6 +271,11 @@ class Backend(QObject):
         self.worker.log_received.connect(self.logReceived.emit)
         self.worker.finished.connect(self.on_worker_finished)
         self.worker.start()
+
+    @Slot(str, str)
+    def launchPackage(self, pkg_type, pkg_name):
+        if self.launch_usecase:
+            self.launch_usecase.execute(pkg_type, pkg_name)
 
     def on_worker_finished(self, success):
         self.actionFinished.emit(success)

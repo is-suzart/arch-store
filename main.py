@@ -55,6 +55,9 @@ if __name__ == "__main__":
     from domain.usecases.get_group_packages import GetGroupPackagesUseCase
     get_group_packages_usecase = GetGroupPackagesUseCase(alpm_repo)
 
+    from domain.usecases.launch_package import LaunchPackageUseCase
+    launch_usecase = LaunchPackageUseCase(alpm_repo, flatpak_repo)
+
     backend = Backend(
         search_usecase=search_usecase,
         get_installed_usecase=get_installed_usecase,
@@ -66,6 +69,7 @@ if __name__ == "__main__":
         get_updatable_usecase=get_updatable_usecase,
         appstream_repo=appstream_repo,
         get_group_packages_usecase=get_group_packages_usecase,
+        launch_usecase=launch_usecase
     )
 
 

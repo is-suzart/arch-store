@@ -9,8 +9,9 @@ MochaDS.Sidebar {
     // Expose the search text field's text property for external access (e.g. main.qml's searchFor)
     property alias searchText: headerSearchField.text
 
-    anchors.verticalCenter: parent.verticalCenter
-    height: parent.fill
+    //anchors.verticalCenter: parent.verticalCenter
+    height: parent.height
+    anchors.fill: parentfill
     variant: "floated"
     expandedWidth: 285
 

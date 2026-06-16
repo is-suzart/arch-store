@@ -125,6 +125,16 @@ MochaDS.Modal {
                 anchors.horizontalCenter: parent.horizontalCenter
 
                 MochaDS.Button {
+                    text: "Abrir"
+                    variant: "primary"
+                    visible: root.appData && root.appData.installed
+                    onClicked: {
+                        root.open = false;
+                        backend.launchPackage(root.appData.type, root.appData.name);
+                    }
+                }
+
+                MochaDS.Button {
                     text: root.appData && root.appData.installed ? "Desinstalar" : "Instalar"
                     variant: root.appData && root.appData.installed ? "danger" : "success"
                     onClicked: {
