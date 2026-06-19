@@ -20,8 +20,8 @@ Flickable {
         interval: 150
         repeat: false
         onTriggered: {
-            gamingGrid.gamingApps = backend.getGamingPackages();
-            heroApps = backend.getGamingHeroApps();
+            devGrid.devApps = backend.getDevelopmentPackages();
+            heroApps = backend.getDevelopmentHeroApps();
             loading = false;
         }
     }
@@ -44,7 +44,6 @@ Flickable {
         width: parent.width
         spacing: 20
         visible: !root.loading
-
 
         // ── Hero Carousel ─────────────────────────────────────────────────────
         HeroCarousel {
@@ -74,7 +73,7 @@ Flickable {
             spacing: MochaDS.Theme.spacing.md
 
             Text {
-                text: qsTr("Jogos e Ferramentas")
+                text: qsTr("Ferramentas de Desenvolvimento")
                 font.family: MochaDS.Theme.typography.familyBold
                 font.pixelSize: MochaDS.Theme.typography.sizeH2
                 color: MochaDS.Theme.colors.text
@@ -94,16 +93,15 @@ Flickable {
 
         }
 
-
-        // Section: Games CozyGrid
+        // Section: Dev CozyGrid
         MochaDS.CozyGrid {
-            id: gamingGrid
+            id: devGrid
 
-            property var gamingApps: []
+            property var devApps: []
 
             width: parent.width
             mobile: false
-            model: gamingGrid.gamingApps
+            model: devGrid.devApps
 
             delegate: Component {
                 MochaDS.CozyGridCol {
@@ -127,7 +125,6 @@ Flickable {
         }
 
     }
-
 
     MochaDS.CozySpinner {
         size: 48

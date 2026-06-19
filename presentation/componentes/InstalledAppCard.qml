@@ -24,7 +24,7 @@ MochaDS.Card {
     }
 
     title: appData ? appData.title : ""
-    subtitle: appData ? "Versão: " + appData.version : ""
+    subtitle: appData ? qsTr("Versão: ") + appData.version : ""
     variant: "default"
     header: [
         Item {
@@ -148,7 +148,7 @@ MochaDS.Card {
                     }
 
                     MochaDS.Button {
-                        text: "Desinstalar"
+                        text: qsTr("Desinstalar")
                         variant: "danger"
                         size: "sm"
                         onClicked: {

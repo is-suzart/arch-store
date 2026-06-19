@@ -39,7 +39,12 @@ class AppStreamFeaturedRepository(FeaturedRepository):
                     installed_version = self.alpm_repo.get_installed_version(app_id) if installed else ""
                     
                     if installed:
-                        pkg_type = "pacman"
+                        is_official = False
+                        for db in self.alpm_repo.syncdbs:
+                            if db.get_pkg(app_id) is not None:
+                                is_official = True
+                                break
+                        pkg_type = "pacman" if is_official else "aur"
                         version = installed_version
                         desc = "Pacote de sistema instalado."
                     else:
@@ -61,7 +66,7 @@ class AppStreamFeaturedRepository(FeaturedRepository):
                             # Not in pacman repos, assume AUR
                             pkg_type = "aur"
                             version = "latest"
-                            desc = "Ferramenta/Biblioteca de jogos (AUR)"
+                            desc = "Ferramenta/Biblioteca do sistema (AUR)"
                             
                     results.append(Package(
                         name=app_id,
@@ -161,7 +166,7 @@ class AppStreamFeaturedRepository(FeaturedRepository):
         fallback_ids = [
             "com.valvesoftware.Steam",
             "net.lutris.Lutris",
-            "com.github.benjamimgois.goverlay",
+            "goverlay",
             "gamemode",
             "mangohud",
             "com.discordapp.Discord",
@@ -169,10 +174,279 @@ class AppStreamFeaturedRepository(FeaturedRepository):
             "hydra-games-launcher-bin",
             "wine",
             "winetricks",
-            "com.github.Mathew148.Protontricks",
+            "protontricks",
             "net.davidotek.pupgui2"
         ]
         return self.get_packages_from_file("gaming_apps.json", fallback_ids)
+
+    def get_gaming_hero_apps(self) -> List[dict]:
+        """Return up to 3 gaming apps with hero image data for the Gaming page carousel."""
+        hero_ids = [
+            "com.valvesoftware.Steam",
+            "net.lutris.Lutris",
+            "com.heroicgameslauncher.hgl",
+        ]
+
+        # Fallback accent colors (Catppuccin Mocha tones) per app when branding absent
+        fallback_colors = {
+            "com.valvesoftware.Steam":        {"light": "#c6d0f5", "dark": "#1b2838"},
+            "net.lutris.Lutris":              {"light": "#f4b8e4", "dark": "#cc5500"},
+            "com.heroicgameslauncher.hgl":    {"light": "#ac9aac", "dark": "#1c202c"},
+        }
+
+        IMAGE_KIND_SOURCE = AppStream.ImageKind.SOURCE
+        results = []
+
+        for app_id in hero_ids:
+            try:
+                comp_box = self.pool.get_components_by_id(app_id)
+                comps = comp_box.as_array() if hasattr(comp_box, 'as_array') else list(comp_box)
+                if not comps:
+                    continue
+                comp = comps[0]
+
+                # Hero image: first DEFAULT screenshot, SOURCE size
+                hero_image = ""
+                for sc in comp.get_screenshots_all():
+                    for img in sc.get_images_all():
+                        if img.get_kind() == IMAGE_KIND_SOURCE:
+                            hero_image = img.get_url() or ""
+                            break
+                    if hero_image:
+                        break
+
+                # Branding colors
+                fb = fallback_colors.get(app_id, {"light": "#c6d0f5", "dark": "#1e1e2e"})
+                brand_light = fb["light"]
+                brand_dark  = fb["dark"]
+                branding = comp.get_branding()
+                if branding:
+                    try:
+                        c = branding.get_color(AppStream.ColorKind.PRIMARY, AppStream.ColorSchemeKind.LIGHT)
+                        if c:
+                            brand_light = c
+                    except Exception:
+                        pass
+                    try:
+                        c = branding.get_color(AppStream.ColorKind.PRIMARY, AppStream.ColorSchemeKind.DARK)
+                        if c:
+                            brand_dark = c
+                    except Exception:
+                        pass
+
+                # Package metadata
+                pkg_name = comp.get_pkgname() or app_id
+                if comp.get_pkgname():
+                    pkg_type = "pacman"
+                    installed = self.alpm_repo.is_installed(pkg_name)
+                    installed_version = self.alpm_repo.get_installed_version(pkg_name) if installed else ""
+                    version = installed_version
+                    if not version:
+                        for db in self.alpm_repo.syncdbs:
+                            try:
+                                pkg = db.get_pkg(pkg_name)
+                                if pkg:
+                                    version = pkg.version
+                                    break
+                            except Exception:
+                                pass
+                    version = version or "latest"
+                else:
+                    pkg_name = app_id
+                    pkg_type = "flatpak"
+                    installed = self.flatpak_repo.is_installed(pkg_name)
+                    installed_version = ""
+                    if installed:
+                        installed_flatpaks = self.flatpak_repo._get_installed_flatpaks()
+                        installed_version = installed_flatpaks.get(pkg_name, "")
+                    version = installed_version or "latest"
+
+                # Icon
+                icon_name = ""
+                icons = comp.get_icons()
+                if icons:
+                    icon_name = icons[0].get_name() if hasattr(icons[0], 'get_name') else ""
+                    if icon_name.endswith((".png", ".svg", ".xpm")):
+                        icon_name = icon_name.rsplit(".", 1)[0]
+                if not icon_name:
+                    icon_name = pkg_name
+
+                results.append({
+                    "name":              pkg_name,
+                    "title":             comp.get_name() or pkg_name,
+                    "desc":              comp.get_summary() or "",
+                    "version":           version,
+                    "type":              pkg_type,
+                    "installed":         installed,
+                    "installed_version": installed_version,
+                    "icon":              icon_name,
+                    "hero_image":        hero_image,
+                    "brand_color_light": brand_light,
+                    "brand_color_dark":  brand_dark,
+                })
+            except Exception as e:
+                print(f"[hero] Error processing {app_id}: {e}")
+
+        return results
+
+
+    def get_development_packages(self) -> List[Package]:
+        fallback_ids = [
+            "code",
+            "visual-studio-code-bin",
+            "neovim",
+            "dev.zed.Zed",
+            "jetbrains-toolbox",
+            "gnome-builder",
+            "nodejs",
+            "fnm",
+            "npm",
+            "yarn",
+            "pnpm",
+            "bun",
+            "biome",
+            "docker",
+            "docker-compose",
+            "podman",
+            "io.podman_desktop.PodmanDesktop",
+            "distrobox",
+            "rest.insomnia.Insomnia",
+            "com.getpostman.Postman",
+            "com.usebruno.Bruno",
+            "rustup",
+            "cargo",
+            "intellij-idea-community-edition",
+            "intellij-idea-ultimate-edition",
+            "visualvm",
+            "maven",
+            "gradle",
+            "go",
+            "delve",
+            "golangci-lint",
+            "com.jetbrains.GoLand",
+            "python",
+            "pyenv",
+            "python-poetry",
+            "ruff",
+            "pycharm-community-edition",
+            "org.jupyter.JupyterLab",
+            "git",
+            "github-cli",
+            "lazygit",
+            "zellij"
+        ]
+        return self.get_packages_from_file("development_apps.json", fallback_ids)
+
+    def get_development_hero_apps(self) -> List[dict]:
+        """Return up to 3 development apps with hero image data for the Development page carousel."""
+        hero_ids = [
+            "com.visualstudio.code",
+            "dev.zed.Zed",
+            "org.gnome.Builder"
+        ]
+
+        # Fallback accent colors (Catppuccin Mocha tones) per app when branding absent
+        fallback_colors = {
+            "com.visualstudio.code":          {"light": "#c6d0f5", "dark": "#0078d4"},
+            "dev.zed.Zed":                    {"light": "#f4b8e4", "dark": "#cc5500"},
+            "org.gnome.Builder":              {"light": "#cba6f7", "dark": "#1a1a24"},
+        }
+
+        IMAGE_KIND_SOURCE = AppStream.ImageKind.SOURCE
+        results = []
+
+        for app_id in hero_ids:
+            try:
+                comp_box = self.pool.get_components_by_id(app_id)
+                comps = comp_box.as_array() if hasattr(comp_box, 'as_array') else list(comp_box)
+                if not comps:
+                    continue
+                comp = comps[0]
+
+                # Hero image
+                hero_image = ""
+                for sc in comp.get_screenshots_all():
+                    for img in sc.get_images_all():
+                        if img.get_kind() == IMAGE_KIND_SOURCE:
+                            hero_image = img.get_url() or ""
+                            break
+                    if hero_image:
+                        break
+
+                # Branding colors
+                fb = fallback_colors.get(app_id, {"light": "#c6d0f5", "dark": "#1e1e2e"})
+                brand_light = fb["light"]
+                brand_dark  = fb["dark"]
+                branding = comp.get_branding()
+                if branding:
+                    try:
+                        c = branding.get_color(AppStream.ColorKind.PRIMARY, AppStream.ColorSchemeKind.LIGHT)
+                        if c:
+                            brand_light = c
+                    except Exception:
+                        pass
+                    try:
+                        c = branding.get_color(AppStream.ColorKind.PRIMARY, AppStream.ColorSchemeKind.DARK)
+                        if c:
+                            brand_dark = c
+                    except Exception:
+                        pass
+
+                # Package metadata
+                pkg_name = comp.get_pkgname() or app_id
+                if comp.get_pkgname():
+                    pkg_type = "pacman"
+                    installed = self.alpm_repo.is_installed(pkg_name)
+                    installed_version = self.alpm_repo.get_installed_version(pkg_name) if installed else ""
+                    version = installed_version
+                    if not version:
+                        for db in self.alpm_repo.syncdbs:
+                            try:
+                                pkg = db.get_pkg(pkg_name)
+                                if pkg:
+                                    version = pkg.version
+                                    break
+                            except Exception:
+                                pass
+                    version = version or "latest"
+                else:
+                    pkg_name = app_id
+                    pkg_type = "flatpak"
+                    installed = self.flatpak_repo.is_installed(pkg_name)
+                    installed_version = ""
+                    if installed:
+                        installed_flatpaks = self.flatpak_repo._get_installed_flatpaks()
+                        installed_version = installed_flatpaks.get(pkg_name, "")
+                    version = installed_version or "latest"
+
+                # Icon
+                icon_name = ""
+                icons = comp.get_icons()
+                if icons:
+                    icon_name = icons[0].get_name() if hasattr(icons[0], 'get_name') else ""
+                    if icon_name.endswith((".png", ".svg", ".xpm")):
+                        icon_name = icon_name.rsplit(".", 1)[0]
+                if not icon_name:
+                    icon_name = pkg_name
+
+                results.append({
+                    "name":              pkg_name,
+                    "title":             comp.get_name() or pkg_name,
+                    "desc":              comp.get_summary() or "",
+                    "version":           version,
+                    "type":              pkg_type,
+                    "installed":         installed,
+                    "installed_version": installed_version,
+                    "icon":              icon_name,
+                    "hero_image":        hero_image,
+                    "brand_color_light": brand_light,
+                    "brand_color_dark":  brand_dark,
+                })
+            except Exception as e:
+                print(f"[hero] Error processing {app_id}: {e}")
+
+        return results
+
 
     def get_hero_apps(self) -> List[dict]:
         """Return up to 6 apps with hero image data for the Explore page carousel.

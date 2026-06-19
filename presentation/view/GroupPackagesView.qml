@@ -48,13 +48,13 @@ Item {
                 Layout.fillWidth: true
                 spacing: 2
                 Text {
-                    text: root.groupLabel !== "" ? root.groupLabel : "Grupo Pacman"
+                    text: root.groupLabel !== "" ? root.groupLabel : qsTr("Grupo Pacman")
                     font.family: MochaDS.Theme.typography.familyBold
                     font.pixelSize: MochaDS.Theme.typography.sizeH2
                     color: MochaDS.Theme.colors.text
                 }
                 Text {
-                    text: "Pacotes oficiais do Arch Linux pertencentes ao grupo '" + root.groupName + "'"
+                    text: qsTr("Pacotes oficiais do Arch Linux pertencentes ao grupo '%1'").arg(root.groupName)
                     font.family: MochaDS.Theme.typography.family
                     font.pixelSize: MochaDS.Theme.typography.sizeSm
                     color: MochaDS.Theme.colors.subtext0
@@ -69,19 +69,19 @@ Item {
 
                 MochaDS.ButtonGroupItem {
                     iconName: "grid"
-                    text: "Grade"
+                    text: qsTr("Grade")
                     onClicked: root.viewMode = "grid"
                 }
 
                 MochaDS.ButtonGroupItem {
                     iconName: "list"
-                    text: "Lista"
+                    text: qsTr("Lista")
                     onClicked: root.viewMode = "list"
                 }
             }
 
             MochaDS.Button {
-                text: "Recarregar"
+                text: qsTr("Recarregar")
                 icon: "rotate-cw"
                 variant: "ghost"
                 loading: root.loading
@@ -124,7 +124,7 @@ Item {
                     }
 
                     Text {
-                        text: "Nenhum pacote encontrado"
+                        text: qsTr("Nenhum pacote encontrado")
                         font.family: MochaDS.Theme.typography.familyBold
                         font.pixelSize: MochaDS.Theme.typography.sizeLg
                         color: MochaDS.Theme.colors.text
@@ -174,15 +174,15 @@ Item {
                                     variant: "primary"
                                 }
 
-                                MochaDS.Badge {
-                                    text: "Instalado"
+                                 MochaDS.Badge {
+                                    text: qsTr("Instalado")
                                     variant: "success"
                                     visible: modelData.installed
                                 }
                             }
 
                             Text {
-                                text: modelData.desc || "Sem descrição disponível."
+                                text: modelData.desc || qsTr("Sem descrição disponível.")
                                 font.family: MochaDS.Theme.typography.family
                                 font.pixelSize: MochaDS.Theme.typography.sizeSm
                                 color: MochaDS.Theme.colors.subtext0
@@ -203,7 +203,7 @@ Item {
                             }
 
                             MochaDS.Button {
-                                text: modelData.installed ? "Mais Detalhes" : "Instalar"
+                                text: modelData.installed ? qsTr("Mais Detalhes") : qsTr("Instalar")
                                 variant: modelData.installed ? "outline" : "primary"
                                 size: "sm"
                                 onClicked: {
@@ -212,7 +212,7 @@ Item {
                                         window.appDetailModal.open = true;
                                     } else {
                                         window.consoleLog = "";
-                                        window.currentAction = "Instalação de " + modelData.title;
+                                        window.currentAction = qsTr("Instalação de %1").arg(modelData.title);
                                         window.terminalModal.open = true;
                                         backend.installPackage(modelData.type, modelData.name);
                                     }
@@ -245,8 +245,8 @@ Item {
 
                             MochaDS.Card {
                                 width: parent.width
-                                title: modelData.title
-                                subtitle: "Versão: " + modelData.version
+                                 title: modelData.title
+                                subtitle: qsTr("Versão: ") + modelData.version
                                 variant: "outline"
 
                                 header: [
@@ -270,7 +270,7 @@ Item {
                                             Item { Layout.fillWidth: true }
 
                                             MochaDS.Badge {
-                                                text: modelData.installed ? "INSTALADO" : "PACMAN"
+                                                text: modelData.installed ? qsTr("INSTALADO") : qsTr("PACMAN")
                                                 variant: modelData.installed ? "success" : "primary"
                                                 Layout.alignment: Qt.AlignVCenter
                                             }
@@ -285,7 +285,7 @@ Item {
                                         spacing: 8
 
                                         Text {
-                                            text: modelData.desc || "Sem descrição disponível."
+                                            text: modelData.desc || qsTr("Sem descrição disponível.")
                                             Layout.fillWidth: true
                                             elide: Text.ElideRight
                                             maximumLineCount: 2
@@ -301,7 +301,7 @@ Item {
                                             Item { Layout.fillWidth: true }
 
                                             MochaDS.Button {
-                                                text: "Mais Detalhes"
+                                                text: qsTr("Mais Detalhes")
                                                 variant: "outline"
                                                 size: "sm"
                                                 onClicked: {
@@ -311,13 +311,13 @@ Item {
                                             }
 
                                             MochaDS.Button {
-                                                text: "Instalar"
+                                                text: qsTr("Instalar")
                                                 variant: "primary"
                                                 size: "sm"
                                                 visible: !modelData.installed
                                                 onClicked: {
                                                     window.consoleLog = "";
-                                                    window.currentAction = "Instalação de " + modelData.title;
+                                                    window.currentAction = qsTr("Instalação de %1").arg(modelData.title);
                                                     window.terminalModal.open = true;
                                                     backend.installPackage(modelData.type, modelData.name);
                                                 }

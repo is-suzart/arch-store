@@ -1,7 +1,7 @@
 [
     "com.valvesoftware.Steam",
     "net.lutris.Lutris",
-    "com.github.benjamimgois.goverlay",
+    "goverlay",
     "gamemode",
     "mangohud",
     "com.discordapp.Discord",
@@ -9,6 +9,6 @@
     "hydra-games-launcher-bin",
     "wine",
     "winetricks",
-    "com.github.Mathew148.Protontricks",
+    "protontricks",
     "net.davidotek.pupgui2"
 ]

@@ -19,6 +19,12 @@ Flickable {
         aurToggle.checked = backend.getConfigBool("enable_aur");
         flatpakToggle.checked = backend.getConfigBool("enable_flatpak");
         startupUpdateToggle.checked = backend.getConfigBool("check_updates_startup");
+
+        var lang = backend.getConfigStr("language");
+        if (lang === "en_US") languageGroup.currentIndex = 1;
+        else if (lang === "es_ES") languageGroup.currentIndex = 2;
+        else if (lang === "zh_CN") languageGroup.currentIndex = 3;
+        else languageGroup.currentIndex = 0;
     }
 
     Component.onCompleted: {
@@ -47,13 +53,13 @@ Flickable {
             ColumnLayout {
                 spacing: 2
                 Text {
-                    text: "Configurações"
+                    text: qsTr("Configurações")
                     font.family: MochaDS.Theme.typography.familyBold
                     font.pixelSize: MochaDS.Theme.typography.sizeH1
                     color: MochaDS.Theme.colors.text
                 }
                 Text {
-                    text: "Personalize e gerencie o comportamento da sua loja de aplicativos"
+                    text: qsTr("Personalize e gerencie o comportamento da sua loja de aplicativos")
                     font.family: MochaDS.Theme.typography.family
                     font.pixelSize: MochaDS.Theme.typography.sizeSm
                     color: MochaDS.Theme.colors.subtext0
@@ -71,8 +77,8 @@ Flickable {
         // Section 1: Aparência (Appearance)
         MochaDS.Card {
             Layout.fillWidth: true
-            title: "Aparência"
-            subtitle: "Personalize a interface visual do aplicativo"
+            title: qsTr("Aparência")
+            subtitle: qsTr("Personalize a interface visual do aplicativo")
             icon: "palette"
             variant: "default"
 
@@ -88,13 +94,13 @@ Flickable {
                         Layout.fillWidth: true
                         spacing: 4
                         Text {
-                            text: "Tema de Cores"
+                            text: qsTr("Tema de Cores")
                             font.family: MochaDS.Theme.typography.familyMedium
                             font.pixelSize: MochaDS.Theme.typography.sizeMd
                             color: MochaDS.Theme.colors.text
                         }
                         Text {
-                            text: "Selecione uma das 4 variantes oficiais do Catppuccin"
+                            text: qsTr("Selecione uma das 4 variantes oficiais do Catppuccin")
                             font.family: MochaDS.Theme.typography.family
                             font.pixelSize: MochaDS.Theme.typography.sizeSm
                             color: MochaDS.Theme.colors.subtext0
@@ -105,17 +111,83 @@ Flickable {
                         id: themeSelect
                         width: 320
                         options: [
-                            { value: "latte", label: "Catppuccin Latte (Claro)" },
-                            { value: "frappe", label: "Catppuccin Frappé (Escuro Suave)" },
-                            { value: "macchiato", label: "Catppuccin Macchiato (Escuro Médio)" },
-                            { value: "mocha", label: "Catppuccin Mocha (Escuro Profundo)" }
+                            { value: "latte", label: qsTr("Catppuccin Latte (Claro)") },
+                            { value: "frappe", label: qsTr("Catppuccin Frappé (Escuro Suave)") },
+                            { value: "macchiato", label: qsTr("Catppuccin Macchiato (Escuro Médio)") },
+                            { value: "mocha", label: qsTr("Catppuccin Mocha (Escuro Profundo)") }
                         ]
-                        placeholder: "Selecione o tema..."
+                        placeholder: qsTr("Selecione o tema...")
                         onValueChanged: function(val) {
                             if (val) {
                                 backend.setConfigStr("theme_flavor", val);
                                 MochaDS.Theme.flavor = val;
-                                toasts.success("Tema alterado para " + selectedLabel, "Sucesso");
+                                toasts.success(qsTr("Tema alterado para %1").arg(selectedLabel), qsTr("Sucesso"));
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 1
+                    color: MochaDS.Theme.colors.surface0
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: MochaDS.Theme.spacing.lg
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 4
+                        Text {
+                            text: qsTr("Idioma do Aplicativo")
+                            font.family: MochaDS.Theme.typography.familyMedium
+                            font.pixelSize: MochaDS.Theme.typography.sizeMd
+                            color: MochaDS.Theme.colors.text
+                        }
+                        Text {
+                            text: qsTr("Escolha o idioma da interface (requer reiniciar o aplicativo)")
+                            font.family: MochaDS.Theme.typography.family
+                            font.pixelSize: MochaDS.Theme.typography.sizeSm
+                            color: MochaDS.Theme.colors.subtext0
+                        }
+                    }
+
+                    MochaDS.ButtonGroup {
+                        id: languageGroup
+                        expand: false
+                        Layout.alignment: Qt.AlignVCenter
+
+                        MochaDS.ButtonGroupItem {
+                            text: qsTr("Padrão")
+                            onClicked: {
+                                backend.setConfigStr("language", "system");
+                                toasts.success(qsTr("Idioma definido para o Padrão do Sistema. Reinicie o aplicativo para aplicar."), qsTr("Sucesso"));
+                            }
+                        }
+
+                        MochaDS.ButtonGroupItem {
+                            text: "English"
+                            onClicked: {
+                                backend.setConfigStr("language", "en_US");
+                                toasts.success(qsTr("Idioma definido para Inglês. Reinicie o aplicativo para aplicar."), qsTr("Sucesso"));
+                            }
+                        }
+
+                        MochaDS.ButtonGroupItem {
+                            text: "Español"
+                            onClicked: {
+                                backend.setConfigStr("language", "es_ES");
+                                toasts.success(qsTr("Idioma definido para Espanhol. Reinicie o aplicativo para aplicar."), qsTr("Sucesso"));
+                            }
+                        }
+
+                        MochaDS.ButtonGroupItem {
+                            text: "中文"
+                            onClicked: {
+                                backend.setConfigStr("language", "zh_CN");
+                                toasts.success(qsTr("Idioma definido para Chinês. Reinicie o aplicativo para aplicar."), qsTr("Sucesso"));
                             }
                         }
                     }
@@ -126,8 +198,8 @@ Flickable {
         // Section 2: Fontes de Pacotes (Package Sources)
         MochaDS.Card {
             Layout.fillWidth: true
-            title: "Fontes de Pacotes"
-            subtitle: "Ative ou desative repositórios adicionais"
+            title: qsTr("Fontes de Pacotes")
+            subtitle: qsTr("Ative ou desative repositórios adicionais")
             icon: "database"
             variant: "default"
 
@@ -144,13 +216,13 @@ Flickable {
                         Layout.fillWidth: true
                         spacing: 4
                         Text {
-                            text: "Habilitar AUR (Arch User Repository)"
+                            text: qsTr("Habilitar AUR (Arch User Repository)")
                             font.family: MochaDS.Theme.typography.familyMedium
                             font.pixelSize: MochaDS.Theme.typography.sizeMd
                             color: MochaDS.Theme.colors.text
                         }
                         Text {
-                            text: "Permite buscar e instalar pacotes mantidos pela comunidade do Arch Linux"
+                            text: qsTr("Permite buscar e instalar pacotes mantidos pela comunidade do Arch Linux")
                             font.family: MochaDS.Theme.typography.family
                             font.pixelSize: MochaDS.Theme.typography.sizeSm
                             color: MochaDS.Theme.colors.subtext0
@@ -161,7 +233,7 @@ Flickable {
                         id: aurToggle
                         onToggled: function(state) {
                             backend.setConfigBool("enable_aur", state);
-                            toasts.info("Suporte ao AUR " + (state ? "habilitado" : "desabilitado"), "Configuração salva");
+                            toasts.info(qsTr("Suporte ao AUR %1").arg(state ? qsTr("habilitado") : qsTr("desabilitado")), qsTr("Configuração salva"));
                         }
                     }
                 }
@@ -181,13 +253,13 @@ Flickable {
                         Layout.fillWidth: true
                         spacing: 4
                         Text {
-                            text: "Habilitar Flatpak"
+                            text: qsTr("Habilitar Flatpak")
                             font.family: MochaDS.Theme.typography.familyMedium
                             font.pixelSize: MochaDS.Theme.typography.sizeMd
                             color: MochaDS.Theme.colors.text
                         }
                         Text {
-                            text: "Habilita suporte a aplicativos empacotados em formato sandbox via Flathub"
+                            text: qsTr("Habilita suporte a aplicativos empacotados em formato sandbox via Flathub")
                             font.family: MochaDS.Theme.typography.family
                             font.pixelSize: MochaDS.Theme.typography.sizeSm
                             color: MochaDS.Theme.colors.subtext0
@@ -198,7 +270,7 @@ Flickable {
                         id: flatpakToggle
                         onToggled: function(state) {
                             backend.setConfigBool("enable_flatpak", state);
-                            toasts.info("Suporte ao Flatpak " + (state ? "habilitado" : "desabilitado"), "Configuração salva");
+                            toasts.info(qsTr("Suporte ao Flatpak %1").arg(state ? qsTr("habilitado") : qsTr("desabilitado")), qsTr("Configuração salva"));
                         }
                     }
                 }
@@ -208,8 +280,8 @@ Flickable {
         // Section 3: Atualizações (Updates)
         MochaDS.Card {
             Layout.fillWidth: true
-            title: "Atualizações"
-            subtitle: "Gerencie a verificação de atualizações de pacotes"
+            title: qsTr("Atualizações")
+            subtitle: qsTr("Gerencie a verificação de atualizações de pacotes")
             icon: "refresh-cw"
             variant: "default"
 
@@ -225,13 +297,13 @@ Flickable {
                         Layout.fillWidth: true
                         spacing: 4
                         Text {
-                            text: "Verificar Atualizações ao Iniciar"
+                            text: qsTr("Verificar Atualizações ao Iniciar")
                             font.family: MochaDS.Theme.typography.familyMedium
                             font.pixelSize: MochaDS.Theme.typography.sizeMd
                             color: MochaDS.Theme.colors.text
                         }
                         Text {
-                            text: "Busca automaticamente por novos pacotes atualizáveis ao abrir a Arch Store"
+                            text: qsTr("Busca automaticamente por novos pacotes atualizáveis ao abrir a Arch Store")
                             font.family: MochaDS.Theme.typography.family
                             font.pixelSize: MochaDS.Theme.typography.sizeSm
                             color: MochaDS.Theme.colors.subtext0
@@ -242,7 +314,7 @@ Flickable {
                         id: startupUpdateToggle
                         onToggled: function(state) {
                             backend.setConfigBool("check_updates_startup", state);
-                            toasts.info("Verificação inicial " + (state ? "habilitada" : "desabilitada"), "Configuração salva");
+                            toasts.info(qsTr("Verificação inicial %1").arg(state ? qsTr("habilitada") : qsTr("desabilitada")), qsTr("Configuração salva"));
                         }
                     }
                 }
@@ -252,8 +324,8 @@ Flickable {
         // Section 4: Manutenção (Maintenance)
         MochaDS.Card {
             Layout.fillWidth: true
-            title: "Manutenção"
-            subtitle: "Limpeza e otimização do sistema"
+            title: qsTr("Manutenção")
+            subtitle: qsTr("Limpeza e otimização do sistema")
             icon: "trash-2"
             variant: "default"
 
@@ -269,13 +341,13 @@ Flickable {
                         Layout.fillWidth: true
                         spacing: 4
                         Text {
-                            text: "Limpar Caches do Sistema"
+                            text: qsTr("Limpar Caches do Sistema")
                             font.family: MochaDS.Theme.typography.familyMedium
                             font.pixelSize: MochaDS.Theme.typography.sizeMd
                             color: MochaDS.Theme.colors.text
                         }
                         Text {
-                            text: "Remove caches temporários do Pacman, Flatpaks não utilizados e AppStream"
+                            text: qsTr("Remove caches temporários do Pacman, Flatpaks não utilizados e AppStream")
                             font.family: MochaDS.Theme.typography.family
                             font.pixelSize: MochaDS.Theme.typography.sizeSm
                             color: MochaDS.Theme.colors.subtext0
@@ -283,13 +355,13 @@ Flickable {
                     }
 
                     MochaDS.Button {
-                        text: "Limpar Cache"
+                        text: qsTr("Limpar Cache")
                         icon: "trash"
                         variant: "danger"
                         size: "md"
                         onClicked: {
                             window.consoleLog = "";
-                            window.currentAction = "Limpeza de Cache";
+                            window.currentAction = qsTr("Limpeza de Cache");
                             window.terminalModal.open = true;
                             backend.clearCache();
                         }

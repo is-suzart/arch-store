@@ -5,6 +5,7 @@ from .uninstall_package import UninstallPackageUseCase
 from .get_featured_packages import GetFeaturedPackagesUseCase
 from .get_popular_packages import GetPopularPackagesUseCase
 from .get_gaming_packages import GetGamingPackagesUseCase
+from .get_development_packages import GetDevelopmentPackagesUseCase
 
 __all__ = [
     "SearchPackagesUseCase",
@@ -13,7 +14,9 @@ __all__ = [
     "UninstallPackageUseCase",
     "GetFeaturedPackagesUseCase",
     "GetPopularPackagesUseCase",
-    "GetGamingPackagesUseCase"
+    "GetGamingPackagesUseCase",
+    "GetDevelopmentPackagesUseCase"
 ]
+
 
 

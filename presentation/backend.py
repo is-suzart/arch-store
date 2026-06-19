@@ -67,7 +67,7 @@ class Backend(QObject):
     searchResultsReady = Signal(list, arguments=['results'])
     searchLoadingChanged = Signal(bool, arguments=['loading'])
 
-    def __init__(self, search_usecase, get_installed_usecase, install_usecase, uninstall_usecase, get_featured_usecase, get_popular_usecase, get_gaming_usecase, get_updatable_usecase, appstream_repo=None, get_group_packages_usecase=None, launch_usecase=None):
+    def __init__(self, search_usecase, get_installed_usecase, install_usecase, uninstall_usecase, get_featured_usecase, get_popular_usecase, get_gaming_usecase, get_updatable_usecase, appstream_repo=None, get_group_packages_usecase=None, launch_usecase=None, get_development_usecase=None):
         super().__init__()
         self.launch_usecase = launch_usecase
         self.get_group_packages_usecase = get_group_packages_usecase
@@ -78,6 +78,7 @@ class Backend(QObject):
         self.get_featured_usecase = get_featured_usecase
         self.get_popular_usecase = get_popular_usecase
         self.get_gaming_usecase = get_gaming_usecase
+        self.get_development_usecase = get_development_usecase
         self.get_updatable_usecase = get_updatable_usecase
         self.appstream_repo = appstream_repo
         self.worker = None
@@ -194,6 +195,39 @@ class Backend(QObject):
             print(f"Error getting hero apps: {e}")
             return []
 
+    @Slot(result=list)
+    def getGamingHeroApps(self):
+        try:
+            if self.appstream_repo is None:
+                return []
+            return self.appstream_repo.get_gaming_hero_apps()
+        except Exception as e:
+            print(f"Error getting gaming hero apps: {e}")
+            return []
+
+    @Slot(result=list)
+    def getDevelopmentPackages(self):
+        try:
+            if self.get_development_usecase is None:
+                return []
+            packages = self.get_development_usecase.execute()
+            return [pkg.to_dict() for pkg in packages]
+        except Exception as e:
+            print(f"Error getting development packages: {e}")
+            return []
+
+    @Slot(result=list)
+    def getDevelopmentHeroApps(self):
+        try:
+            if self.appstream_repo is None:
+                return []
+            return self.appstream_repo.get_development_hero_apps()
+        except Exception as e:
+            print(f"Error getting development hero apps: {e}")
+            return []
+
+
+
     @Slot(str, str, result=str)
     def getAppHeroImage(self, name, pkg_type):
         try:
@@ -207,15 +241,15 @@ class Backend(QObject):
     @Slot(str, str)
     def installPackage(self, pkg_type, pkg_name):
         if self.worker and self.worker.isRunning():
-            self.logReceived.emit("Another operation is already running!")
+            self.logReceived.emit(self.tr("Another operation is already running!"))
             return
 
         cmd = self.install_usecase.execute(pkg_type, pkg_name)
         if not cmd:
-            self.logReceived.emit("Unknown package type.")
+            self.logReceived.emit(self.tr("Unknown package type."))
             return
 
-        self.logReceived.emit(f"Starting installation of {pkg_name} ({pkg_type})...")
+        self.logReceived.emit(self.tr("Starting installation of {} ({})...").format(pkg_name, pkg_type))
         self.worker = InstallWorker(cmd)
         self.worker.log_received.connect(self.logReceived.emit)
         self.worker.finished.connect(self.on_worker_finished)
@@ -224,15 +258,15 @@ class Backend(QObject):
     @Slot(str, str)
     def uninstallPackage(self, pkg_type, pkg_name):
         if self.worker and self.worker.isRunning():
-            self.logReceived.emit("Another operation is already running!")
+            self.logReceived.emit(self.tr("Another operation is already running!"))
             return
 
         cmd = self.uninstall_usecase.execute(pkg_type, pkg_name)
         if not cmd:
-            self.logReceived.emit("Unknown package type.")
+            self.logReceived.emit(self.tr("Unknown package type."))
             return
 
-        self.logReceived.emit(f"Removing {pkg_name} ({pkg_type})...")
+        self.logReceived.emit(self.tr("Removing {} ({})...").format(pkg_name, pkg_type))
         self.worker = InstallWorker(cmd)
         self.worker.log_received.connect(self.logReceived.emit)
         self.worker.finished.connect(self.on_worker_finished)
@@ -250,7 +284,7 @@ class Backend(QObject):
     @Slot(str)
     def updateCategory(self, category):
         if self.worker and self.worker.isRunning():
-            self.logReceived.emit("Another operation is already running!")
+            self.logReceived.emit(self.tr("Another operation is already running!"))
             return
 
         if category == "pacman":
@@ -263,10 +297,10 @@ class Backend(QObject):
         elif category == "all":
             cmd = ["sh", "-c", "sudo -A pacman -Syu --noconfirm && yay --sudo sudo -A -Sua --noconfirm && flatpak update -y --noninteractive"]
         else:
-            self.logReceived.emit("Unknown update category.")
+            self.logReceived.emit(self.tr("Unknown update category."))
             return
 
-        self.logReceived.emit(f"Starting system update for: {category.upper()}...")
+        self.logReceived.emit(self.tr("Starting system update for: {}...").format(category.upper()))
         self.worker = InstallWorker(cmd)
         self.worker.log_received.connect(self.logReceived.emit)
         self.worker.finished.connect(self.on_worker_finished)
@@ -317,11 +351,11 @@ class Backend(QObject):
     @Slot()
     def clearCache(self):
         if self.worker and self.worker.isRunning():
-            self.logReceived.emit("Another operation is already running!")
+            self.logReceived.emit(self.tr("Another operation is already running!"))
             return
 
         cmd = ["sh", "-c", "sudo -A pacman -Scc --noconfirm && flatpak uninstall --unused -y --noninteractive && appstreamcli refresh-cache --user"]
-        self.logReceived.emit("Iniciando limpeza de cache...")
+        self.logReceived.emit(self.tr("Iniciando limpeza de cache..."))
         self.worker = InstallWorker(cmd)
         self.worker.log_received.connect(self.logReceived.emit)
         self.worker.finished.connect(self.on_worker_finished)
@@ -354,24 +388,24 @@ class Backend(QObject):
                 all_groups = ["gnome", "kde-system", "xfce4", "qt6", "xorg"]
                 
             labels = {
-                "gnome": "Ambiente GNOME",
-                "kde-system": "Ambiente KDE",
-                "xfce4": "Ambiente XFCE",
-                "qt6": "Desenvolvimento Qt6",
-                "base-devel": "Desenvolvimento Base",
-                "xorg": "Servidor Xorg",
-                "mate": "Ambiente MATE",
-                "lxqt": "Ambiente LXQt",
-                "deepin": "Ambiente Deepin"
+                "gnome": self.tr("Ambiente GNOME"),
+                "kde-system": self.tr("Ambiente KDE"),
+                "xfce4": self.tr("Ambiente XFCE"),
+                "qt6": self.tr("Desenvolvimento Qt6"),
+                "base-devel": self.tr("Desenvolvimento Base"),
+                "xorg": self.tr("Servidor Xorg"),
+                "mate": self.tr("Ambiente MATE"),
+                "lxqt": self.tr("Ambiente LXQt"),
+                "deepin": self.tr("Ambiente Deepin")
             }
             
             return [{"name": g, "label": labels.get(g, g)} for g in all_groups]
         except Exception as e:
             print(f"Error getting ALPM groups: {e}")
             return [
-                {"name": "gnome", "label": "Ambiente GNOME"},
-                {"name": "kde-system", "label": "Ambiente KDE"},
-                {"name": "xfce4", "label": "Ambiente XFCE"},
-                {"name": "qt6", "label": "Desenvolvimento Qt6"},
-                {"name": "xorg", "label": "Servidor Xorg"}
+                {"name": "gnome", "label": self.tr("Ambiente GNOME")},
+                {"name": "kde-system", "label": self.tr("Ambiente KDE")},
+                {"name": "xfce4", "label": self.tr("Ambiente XFCE")},
+                {"name": "qt6", "label": self.tr("Desenvolvimento Qt6")},
+                {"name": "xorg", "label": self.tr("Servidor Xorg")}
             ]

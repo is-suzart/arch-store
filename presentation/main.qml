@@ -20,40 +20,24 @@ ApplicationWindow {
     property string consoleLog: ""
     property string currentAction: ""
     property var installedApps: []
-
     // Batch Install properties
     property var selectedBatchApps: []
     property var batchQueue: []
     property bool isBatchRunning: false
     property var currentBatchApp: null
-
     // Batch Uninstall properties
     property var selectedBatchUninstallApps: []
     property var batchUninstallQueue: []
     property bool isBatchUninstallRunning: false
     property var currentBatchUninstallApp: null
-
     // Expose modals and views as properties on window for external files to access safely
     property alias appDetailModal: appDetailModal
     property alias terminalModal: terminalModal
     property alias gamingView: gamingView
-
+    property alias developmentView: developmentView
     // Global Loader State
     property bool globalLoading: false
     property string globalLoadingLabel: ""
-
-    Timer {
-        id: globalLoaderTimer
-        interval: 150
-        repeat: false
-        property var callback: null
-        onTriggered: {
-            if (callback) {
-                callback();
-            }
-            globalLoading = false;
-        }
-    }
 
     function runWithLoader(label, callbackFunc) {
         globalLoadingLabel = label;
@@ -66,9 +50,12 @@ ApplicationWindow {
         installedApps = backend.getInstalledPackages();
         exploreView.refreshFeatured();
         gamingView.refresh();
-        if (typeof updatesView !== "undefined" && updatesView !== null) {
+        if (typeof developmentView !== "undefined" && developmentView !== null)
+            developmentView.refresh();
+
+        if (typeof updatesView !== "undefined" && updatesView !== null)
             updatesView.refresh();
-        }
+
     }
 
     function triggerSearch(query, immediate) {
@@ -86,7 +73,7 @@ ApplicationWindow {
     }
 
     function loadGroup(groupName, groupLabel) {
-        runWithLoader("Carregando pacotes do grupo " + groupLabel + "...", function() {
+        runWithLoader(qsTr("Carregando pacotes do grupo %1...").arg(groupLabel), function() {
             groupPackagesView.groupName = groupName;
             groupPackagesView.groupLabel = groupLabel;
             window.currentPage = "group_" + groupName;
@@ -96,16 +83,16 @@ ApplicationWindow {
 
     function triggerUninstall(type, name) {
         consoleLog = "";
-        currentAction = "Desinstalação";
+        currentAction = qsTr("Desinstalação");
         terminalModal.open = true;
         backend.uninstallPackage(type, name);
     }
 
     function isBatchAppSelected(pkgName) {
         for (var i = 0; i < selectedBatchApps.length; i++) {
-            if (selectedBatchApps[i].name === pkgName) {
+            if (selectedBatchApps[i].name === pkgName)
                 return true;
-            }
+
         }
         return false;
     }
@@ -114,19 +101,18 @@ ApplicationWindow {
         var temp = [];
         var found = false;
         for (var i = 0; i < selectedBatchApps.length; i++) {
-            if (selectedBatchApps[i].name === appData.name) {
+            if (selectedBatchApps[i].name === appData.name)
                 found = true;
-            } else {
+            else
                 temp.push(selectedBatchApps[i]);
-            }
         }
-        if (!found) {
+        if (!found)
             temp.push({
-                name: appData.name,
-                title: appData.title || appData.name,
-                type: appData.type
-            });
-        }
+            "name": appData.name,
+            "title": appData.title || appData.name,
+            "type": appData.type
+        });
+
         selectedBatchApps = temp;
     }
 
@@ -135,8 +121,9 @@ ApplicationWindow {
     }
 
     function startBatchInstallation() {
-        if (selectedBatchApps.length === 0) return;
-        
+        if (selectedBatchApps.length === 0)
+            return ;
+
         var queue = [];
         for (var i = 0; i < selectedBatchApps.length; i++) {
             queue.push(selectedBatchApps[i]);
@@ -144,7 +131,6 @@ ApplicationWindow {
         batchQueue = queue;
         isBatchRunning = true;
         clearBatchApps();
-        
         consoleLog = "";
         processNextBatchItem();
     }
@@ -154,31 +140,28 @@ ApplicationWindow {
             isBatchRunning = false;
             currentBatchApp = null;
             terminalModal.open = false;
-            toasts.success("Todas as instalações em lote foram concluídas!", "Sucesso");
+            toasts.success(qsTr("Todas as instalações em lote foram concluídas!"), qsTr("Sucesso"));
             refreshInstalledList();
-            return;
+            return ;
         }
-        
         var nextApp = batchQueue[0];
         var tempQueue = [];
         for (var i = 1; i < batchQueue.length; i++) {
             tempQueue.push(batchQueue[i]);
         }
         batchQueue = tempQueue;
-        
         currentBatchApp = nextApp;
-        currentAction = "Instalação de " + nextApp.title;
+        currentAction = qsTr("Instalação de %1").arg(nextApp.title);
         terminalModal.open = true;
-        
-        consoleLog += "\n=== Iniciando instalação de " + nextApp.title + " (" + nextApp.type + ") ===\n";
+        consoleLog += qsTr("\n=== Iniciando instalação de %1 (%2) ===\n").arg(nextApp.title).arg(nextApp.type);
         backend.installPackage(nextApp.type, nextApp.name);
     }
 
     function isBatchUninstallAppSelected(pkgName) {
         for (var i = 0; i < selectedBatchUninstallApps.length; i++) {
-            if (selectedBatchUninstallApps[i].name === pkgName) {
+            if (selectedBatchUninstallApps[i].name === pkgName)
                 return true;
-            }
+
         }
         return false;
     }
@@ -187,19 +170,18 @@ ApplicationWindow {
         var temp = [];
         var found = false;
         for (var i = 0; i < selectedBatchUninstallApps.length; i++) {
-            if (selectedBatchUninstallApps[i].name === appData.name) {
+            if (selectedBatchUninstallApps[i].name === appData.name)
                 found = true;
-            } else {
+            else
                 temp.push(selectedBatchUninstallApps[i]);
-            }
         }
-        if (!found) {
+        if (!found)
             temp.push({
-                name: appData.name,
-                title: appData.title || appData.name,
-                type: appData.type
-            });
-        }
+            "name": appData.name,
+            "title": appData.title || appData.name,
+            "type": appData.type
+        });
+
         selectedBatchUninstallApps = temp;
     }
 
@@ -208,8 +190,9 @@ ApplicationWindow {
     }
 
     function startBatchUninstallation() {
-        if (selectedBatchUninstallApps.length === 0) return;
-        
+        if (selectedBatchUninstallApps.length === 0)
+            return ;
+
         var queue = [];
         for (var i = 0; i < selectedBatchUninstallApps.length; i++) {
             queue.push(selectedBatchUninstallApps[i]);
@@ -217,7 +200,6 @@ ApplicationWindow {
         batchUninstallQueue = queue;
         isBatchUninstallRunning = true;
         clearBatchUninstallApps();
-        
         consoleLog = "";
         processNextBatchUninstallItem();
     }
@@ -227,23 +209,20 @@ ApplicationWindow {
             isBatchUninstallRunning = false;
             currentBatchUninstallApp = null;
             terminalModal.open = false;
-            toasts.success("Todas as desinstalações em lote foram concluídas!", "Sucesso");
+            toasts.success(qsTr("Todas as desinstalações em lote foram concluídas!"), qsTr("Sucesso"));
             refreshInstalledList();
-            return;
+            return ;
         }
-        
         var nextApp = batchUninstallQueue[0];
         var tempQueue = [];
         for (var i = 1; i < batchUninstallQueue.length; i++) {
             tempQueue.push(batchUninstallQueue[i]);
         }
         batchUninstallQueue = tempQueue;
-        
         currentBatchUninstallApp = nextApp;
-        currentAction = "Desinstalação de " + nextApp.title;
+        currentAction = qsTr("Desinstalação de %1").arg(nextApp.title);
         terminalModal.open = true;
-        
-        consoleLog += "\n=== Iniciando desinstalação de " + nextApp.title + " (" + nextApp.type + ") ===\n";
+        consoleLog += qsTr("\n=== Iniciando desinstalação de %1 (%2) ===\n").arg(nextApp.title).arg(nextApp.type);
         backend.uninstallPackage(nextApp.type, nextApp.name);
     }
 
@@ -257,10 +236,24 @@ ApplicationWindow {
         var saved_flavor = backend.getConfigStr("theme_flavor");
         MochaDS.Theme.flavor = saved_flavor;
         refreshInstalledList();
-        
         var check_updates = backend.getConfigBool("check_updates_startup");
-        if (check_updates) {
+        if (check_updates)
             updatesView.refresh();
+
+    }
+
+    Timer {
+        id: globalLoaderTimer
+
+        property var callback: null
+
+        interval: 75
+        repeat: false
+        onTriggered: {
+            if (callback)
+                callback();
+
+            globalLoading = false;
         }
     }
 
@@ -286,30 +279,28 @@ ApplicationWindow {
         onActionFinished: {
             searchLoading = false;
             if (window.isBatchRunning) {
-                if (success) {
-                    toasts.success("Instalação de " + (window.currentBatchApp ? window.currentBatchApp.title : "") + " concluída!", "Sucesso");
-                } else {
-                    toasts.error("Falha ao instalar " + (window.currentBatchApp ? window.currentBatchApp.title : "") + ".", "Erro");
-                }
+                if (success)
+                    toasts.success(qsTr("Instalação de %1 concluída!").arg(window.currentBatchApp ? window.currentBatchApp.title : ""), qsTr("Sucesso"));
+                else
+                    toasts.error(qsTr("Falha ao instalar %1.").arg(window.currentBatchApp ? window.currentBatchApp.title : ""), qsTr("Erro"));
                 window.processNextBatchItem();
             } else if (window.isBatchUninstallRunning) {
-                if (success) {
-                    toasts.success("Desinstalação de " + (window.currentBatchUninstallApp ? window.currentBatchUninstallApp.title : "") + " concluída!", "Sucesso");
-                } else {
-                    toasts.error("Falha ao desinstalar " + (window.currentBatchUninstallApp ? window.currentBatchUninstallApp.title : "") + ".", "Erro");
-                }
+                if (success)
+                    toasts.success(qsTr("Desinstalação de %1 concluída!").arg(window.currentBatchUninstallApp ? window.currentBatchUninstallApp.title : ""), qsTr("Sucesso"));
+                else
+                    toasts.error(qsTr("Falha ao desinstalar %1.").arg(window.currentBatchUninstallApp ? window.currentBatchUninstallApp.title : ""), qsTr("Erro"));
                 window.processNextBatchUninstallItem();
             } else {
                 terminalModal.open = false;
                 if (success)
-                    toasts.success("Operação concluída com sucesso!", "Sucesso");
+                    toasts.success(qsTr("Operação concluída com sucesso!"), qsTr("Sucesso"));
                 else
-                    toasts.error("A operação falhou. Verifique os logs.", "Erro");
-
-                runWithLoader("Atualizando lista de aplicativos...", function() {
+                    toasts.error(qsTr("A operação falhou. Verifique os logs."), qsTr("Erro"));
+                runWithLoader(qsTr("Atualizando lista de aplicativos..."), function() {
                     refreshInstalledList();
                     if (searchQuery)
                         triggerSearch(searchQuery, true);
+
                 });
             }
         }
@@ -317,13 +308,13 @@ ApplicationWindow {
 
     MochaDS.Shell {
         id: mainShell
+
         anchors.fill: parent
         sidebarWidth: 300
-        headerVisible: false
+        headerVisible: mainShell.isMobile
         columnCount: 1
         footerHeight: 70
         footerVisible: (currentPage === "installed" && selectedBatchUninstallApps.length > 0) || (currentPage !== "installed" && selectedBatchApps.length > 0)
-
         // 1. Top Header Content
         header: [
             Rectangle {
@@ -332,14 +323,31 @@ ApplicationWindow {
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: MochaDS.Theme.spacing.lg
-                    anchors.rightMargin: MochaDS.Theme.spacing.lg
-                    spacing: MochaDS.Theme.spacing.md
+                    anchors.leftMargin: MochaDS.Theme.spacing.md
+                    anchors.rightMargin: MochaDS.Theme.spacing.md
+                    spacing: MochaDS.Theme.spacing.sm
+
+                    MochaDS.Button {
+                        icon: "menu"
+                        variant: "ghost"
+                        size: "sm"
+                        Layout.alignment: Qt.AlignVCenter
+                        onClicked: {
+                            mainShell.sidebarOpenMobile = !mainShell.sidebarOpenMobile;
+                        }
+                    }
+
+                    MochaDS.LucideIcon {
+                        name: "package"
+                        size: 20
+                        color: MochaDS.Theme.colors.primary
+                        Layout.alignment: Qt.AlignVCenter
+                    }
 
                     Text {
-                        text: "Central de Aplicativos"
+                        text: "Arch Store"
                         font.family: MochaDS.Theme.typography.familyBold
-                        font.pixelSize: MochaDS.Theme.typography.sizeH2
+                        font.pixelSize: MochaDS.Theme.typography.sizeLg
                         color: MochaDS.Theme.colors.text
                         Layout.alignment: Qt.AlignVCenter
                     }
@@ -376,6 +384,7 @@ ApplicationWindow {
 
                     RowLayout {
                         spacing: 8
+
                         MochaDS.Badge {
                             text: String(window.selectedBatchApps.length)
                             variant: "primary"
@@ -383,14 +392,13 @@ ApplicationWindow {
                         }
 
                         Text {
-                            text: window.selectedBatchApps.length === 1 
-                                ? "aplicativo selecionado para instalação"
-                                : "aplicativos selecionados para instalação em lote"
+                            text: window.selectedBatchApps.length === 1 ? qsTr("aplicativo selecionado para instalação") : qsTr("aplicativos selecionados para instalação em lote")
                             font.family: MochaDS.Theme.typography.family
                             font.pixelSize: MochaDS.Theme.typography.sizeMd
                             color: MochaDS.Theme.colors.text
                             Layout.alignment: Qt.AlignVCenter
                         }
+
                     }
 
                     Item {
@@ -398,7 +406,7 @@ ApplicationWindow {
                     }
 
                     MochaDS.Button {
-                        text: "Limpar Seleção"
+                        text: qsTr("Limpar Seleção")
                         variant: "outline"
                         size: "sm"
                         onClicked: {
@@ -407,13 +415,14 @@ ApplicationWindow {
                     }
 
                     MochaDS.Button {
-                        text: "Instalar em Lote"
+                        text: qsTr("Instalar em Lote")
                         variant: "success"
                         size: "md"
                         onClicked: {
                             window.startBatchInstallation();
                         }
                     }
+
                 }
 
                 // 3.2. Batch Uninstall Footer
@@ -426,6 +435,7 @@ ApplicationWindow {
 
                     RowLayout {
                         spacing: 8
+
                         MochaDS.Badge {
                             text: String(window.selectedBatchUninstallApps.length)
                             variant: "danger"
@@ -433,14 +443,13 @@ ApplicationWindow {
                         }
 
                         Text {
-                            text: window.selectedBatchUninstallApps.length === 1 
-                                ? "aplicativo selecionado para desinstalação"
-                                : "aplicativos selecionados para desinstalação em lote"
+                            text: window.selectedBatchUninstallApps.length === 1 ? qsTr("aplicativo selecionado para desinstalação") : qsTr("aplicativos selecionados para desinstalação em lote")
                             font.family: MochaDS.Theme.typography.family
                             font.pixelSize: MochaDS.Theme.typography.sizeMd
                             color: MochaDS.Theme.colors.text
                             Layout.alignment: Qt.AlignVCenter
                         }
+
                     }
 
                     Item {
@@ -448,7 +457,7 @@ ApplicationWindow {
                     }
 
                     MochaDS.Button {
-                        text: "Limpar Seleção"
+                        text: qsTr("Limpar Seleção")
                         variant: "outline"
                         size: "sm"
                         onClicked: {
@@ -457,14 +466,16 @@ ApplicationWindow {
                     }
 
                     MochaDS.Button {
-                        text: "Desinstalar em Lote"
+                        text: qsTr("Desinstalar em Lote")
                         variant: "danger"
                         size: "md"
                         onClicked: {
                             window.startBatchUninstallation();
                         }
                     }
+
                 }
+
             }
         ]
         col1: [
@@ -474,6 +485,7 @@ ApplicationWindow {
                 // View 1: Explore View
                 ExploreView {
                     id: exploreView
+
                     anchors.fill: parent
                     visible: currentPage === "explore"
                 }
@@ -493,13 +505,23 @@ ApplicationWindow {
                 // View 4: Gaming View
                 GamingView {
                     id: gamingView
+
                     anchors.fill: parent
                     visible: currentPage === "gaming"
+                }
+
+                // View 4.5: Development View
+                DevelopmentView {
+                    id: developmentView
+
+                    anchors.fill: parent
+                    visible: currentPage === "development"
                 }
 
                 // View 5: Updates View
                 UpdatesView {
                     id: updatesView
+
                     anchors.fill: parent
                     visible: currentPage === "updates"
                 }
@@ -507,20 +529,21 @@ ApplicationWindow {
                 // View 6: Settings View
                 SettingsView {
                     id: settingsView
+
                     anchors.fill: parent
                     visible: currentPage === "settings"
-                    
                     // Whenever settingsView becomes visible, reload configuration
                     onVisibleChanged: {
-                        if (visible) {
+                        if (visible)
                             settingsView.loadConfig();
-                        }
+
                     }
                 }
 
                 // View 7: Group Packages View
                 GroupPackagesView {
                     id: groupPackagesView
+
                     anchors.fill: parent
                     visible: currentPage.startsWith("group_")
                 }
@@ -531,6 +554,7 @@ ApplicationWindow {
 
     DetailModalApp {
         id: appDetailModal
+
         appData: selectedApp
     }
 
@@ -538,7 +562,7 @@ ApplicationWindow {
     MochaDS.Modal {
         id: terminalModal
 
-        title: currentAction + " em Andamento..."
+        title: qsTr("%1 em Andamento...").arg(currentAction)
         size: "lg"
 
         ColumnLayout {
@@ -554,7 +578,7 @@ ApplicationWindow {
                 }
 
                 Text {
-                    text: "Por favor, aguarde o processo finalizar..."
+                    text: qsTr("Por favor, aguarde o processo finalizar...")
                     font.family: MochaDS.Theme.typography.family
                     font.pixelSize: MochaDS.Theme.typography.sizeSm
                     color: MochaDS.Theme.colors.subtext0

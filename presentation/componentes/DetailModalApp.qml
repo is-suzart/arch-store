@@ -89,7 +89,7 @@ MochaDS.Modal {
                     }
 
                     Text {
-                        text: root.appData ? "Versão: " + root.appData.version : ""
+                        text: root.appData ? qsTr("Versão: ") + root.appData.version : ""
                         font.family: MochaDS.Theme.typography.family
                         font.pixelSize: MochaDS.Theme.typography.sizeSm
                         color: MochaDS.Theme.colors.subtext0
@@ -113,7 +113,7 @@ MochaDS.Modal {
                 spacing: 8
 
                 MochaDS.Badge {
-                    text: root.appData ? "TIPO: " + root.appData.type.toUpperCase() : ""
+                    text: root.appData ? qsTr("TIPO: ") + root.appData.type.toUpperCase() : ""
                     variant: root.appData && root.appData.type === "flatpak" ? "secondary" : "primary"
                 }
 
@@ -125,7 +125,7 @@ MochaDS.Modal {
                 anchors.horizontalCenter: parent.horizontalCenter
 
                 MochaDS.Button {
-                    text: "Abrir"
+                    text: qsTr("Abrir")
                     variant: "primary"
                     visible: root.appData && root.appData.installed
                     onClicked: {
@@ -135,12 +135,12 @@ MochaDS.Modal {
                 }
 
                 MochaDS.Button {
-                    text: root.appData && root.appData.installed ? "Desinstalar" : "Instalar"
+                    text: root.appData && root.appData.installed ? qsTr("Desinstalar") : qsTr("Instalar")
                     variant: root.appData && root.appData.installed ? "danger" : "success"
                     onClicked: {
                         root.open = false;
                         window.consoleLog = "";
-                        window.currentAction = root.appData.installed ? "Desinstalação" : "Instalação";
+                        window.currentAction = root.appData.installed ? qsTr("Desinstalação") : qsTr("Instalação");
                         window.terminalModal.open = true;
                         if (root.appData.installed)
                             backend.uninstallPackage(root.appData.type, root.appData.name);
@@ -150,7 +150,7 @@ MochaDS.Modal {
                 }
 
                 MochaDS.Button {
-                    text: "Fechar"
+                    text: qsTr("Fechar")
                     variant: "outline"
                     onClicked: root.open = false
                 }

@@ -50,7 +50,7 @@ Flickable {
 
         // Section 3: Curated Distro Highlights (pamac-like)
         Text {
-            text: "Destaques da Distribuição"
+            text: qsTr("Destaques da Distribuição")
             font.family: MochaDS.Theme.typography.familyMedium
             font.pixelSize: MochaDS.Theme.typography.sizeXl
             color: MochaDS.Theme.colors.text
@@ -90,7 +90,7 @@ Flickable {
 
         // Section 4: Trending Flatpaks from Flathub API
         Text {
-            text: "Tendências no Flatpak"
+            text: qsTr("Tendências no Flatpak")
             font.family: MochaDS.Theme.typography.familyMedium
             font.pixelSize: MochaDS.Theme.typography.sizeXl
             color: MochaDS.Theme.colors.text

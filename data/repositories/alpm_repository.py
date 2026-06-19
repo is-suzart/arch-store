@@ -110,12 +110,20 @@ class AlpmPackageRepository(PackageRepository):
                         icon_name = self._get_icon_from_desktop("/" + file_path)
                         break
                 if is_desktop:
+                    # Check if the package is in sync databases to distinguish pacman vs aur
+                    is_official = False
+                    for db in self.syncdbs:
+                        if db.get_pkg(pkg.name) is not None:
+                            is_official = True
+                            break
+                    pkg_type = "pacman" if is_official else "aur"
+
                     installed.append(Package(
                         name=pkg.name,
                         title=pkg.name,
                         desc=pkg.desc or "",
                         version=pkg.version,
-                        type="pacman",
+                        type=pkg_type,
                         installed=True,
                         installed_version=pkg.version,
                         icon=icon_name

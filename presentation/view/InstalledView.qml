@@ -22,6 +22,13 @@ Item {
         }
     }
 
+    onVisibleChanged: {
+        if (visible) {
+            listLoading = true;
+            refreshTimer.start();
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 20
@@ -32,7 +39,7 @@ Item {
             spacing: MochaDS.Theme.spacing.md
 
             Text {
-                text: "Aplicativos Instalados"
+                text: qsTr("Aplicativos Instalados")
                 font.family: MochaDS.Theme.typography.familyBold
                 font.pixelSize: MochaDS.Theme.typography.sizeH2
                 color: MochaDS.Theme.colors.text
@@ -48,13 +55,13 @@ Item {
 
                     MochaDS.ButtonGroupItem {
                         iconName: "grid"
-                        text: "Grade"
+                        text: qsTr("Grade")
                         onClicked: root.viewMode = "grid"
                     }
 
                     MochaDS.ButtonGroupItem {
                         iconName: "list"
-                        text: "Lista"
+                        text: qsTr("Lista")
                         onClicked: root.viewMode = "list"
                     }
 
@@ -63,7 +70,7 @@ Item {
             }
 
             MochaDS.Button {
-                text: "Atualizar Lista"
+                text: qsTr("Atualizar Lista")
                 icon: "rotate-cw"
                 variant: "ghost"
                 loading: root.listLoading
@@ -205,7 +212,7 @@ Item {
                         }
 
                         MochaDS.Button {
-                            text: "Desinstalar"
+                            text: qsTr("Desinstalar")
                             variant: "danger"
                             size: "sm"
                             onClicked: {

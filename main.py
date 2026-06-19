@@ -26,6 +26,36 @@ from presentation.backend import Backend
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+
+    from PySide6.QtCore import QTranslator, QLocale
+    translator = QTranslator()
+    current_dir = Path(__file__).parent.absolute()
+    locale_dir = current_dir / "locale"
+    
+    # Read language preference from config.json
+    config_path = Path.home() / ".config" / "arch-store" / "config.json"
+    lang_code = "system"
+    if config_path.exists():
+        try:
+            import json
+            with open(config_path, "r", encoding="utf-8") as f:
+                config_data = json.load(f)
+                lang_code = config_data.get("language", "system")
+        except Exception as e:
+            print(f"Error reading language from config in main.py: {e}")
+
+    if lang_code and lang_code != "system":
+        locale = QLocale(lang_code)
+    else:
+        locale = QLocale.system()
+
+    # Load translator based on selected locale
+    if translator.load(locale, "arch-store", "_", str(locale_dir)):
+        app.installTranslator(translator)
+        print(f"Loaded translation for locale: {locale.name()}")
+    else:
+        print(f"No translation found for locale: {locale.name()}, falling back to system default (pt_BR)")
+
     engine = QQmlApplicationEngine()
 
     # Register native system theme icon provider
@@ -48,6 +78,8 @@ if __name__ == "__main__":
     get_featured_usecase = GetFeaturedPackagesUseCase(appstream_repo)
     get_popular_usecase = GetPopularPackagesUseCase(flatpak_repo)
     get_gaming_usecase = GetGamingPackagesUseCase(appstream_repo)
+    from domain.usecases.get_development_packages import GetDevelopmentPackagesUseCase
+    get_development_usecase = GetDevelopmentPackagesUseCase(appstream_repo)
     
     from domain.usecases.get_updatable_packages import GetUpdatablePackagesUseCase
     get_updatable_usecase = GetUpdatablePackagesUseCase(alpm_repo, aur_repo, flatpak_repo)
@@ -66,11 +98,13 @@ if __name__ == "__main__":
         get_featured_usecase=get_featured_usecase,
         get_popular_usecase=get_popular_usecase,
         get_gaming_usecase=get_gaming_usecase,
+        get_development_usecase=get_development_usecase,
         get_updatable_usecase=get_updatable_usecase,
         appstream_repo=appstream_repo,
         get_group_packages_usecase=get_group_packages_usecase,
         launch_usecase=launch_usecase
     )
+
 
 
     engine.rootContext().setContextProperty("backend", backend)

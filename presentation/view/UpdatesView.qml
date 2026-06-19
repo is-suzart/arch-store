@@ -46,6 +46,12 @@ Item {
         refresh();
     }
 
+    onVisibleChanged: {
+        if (visible) {
+            refresh();
+        }
+    }
+
     // Active model based on tab index
     readonly property var activeModel: {
         if (updateTabs.currentIndex === 0) return pacmanUpdates;
@@ -70,7 +76,7 @@ Item {
             spacing: MochaDS.Theme.spacing.md
 
             Text {
-                text: "Atualizações do Sistema"
+                text: qsTr("Atualizações do Sistema")
                 font.family: MochaDS.Theme.typography.familyBold
                 font.pixelSize: MochaDS.Theme.typography.sizeH2
                 color: MochaDS.Theme.colors.text
@@ -81,9 +87,9 @@ Item {
             MochaDS.Tabs {
                 id: updateTabs
                 model: [
-                    "Pacman (" + pacmanUpdates.length + ")",
-                    "AUR (" + aurUpdates.length + ")",
-                    "Flatpak (" + flatpakUpdates.length + ")"
+                    qsTr("Pacman (%1)").arg(pacmanUpdates.length),
+                    qsTr("AUR (%1)").arg(aurUpdates.length),
+                    qsTr("Flatpak (%1)").arg(flatpakUpdates.length)
                 ]
                 currentIndex: 0
                 variant: "segmented"
@@ -101,20 +107,20 @@ Item {
 
                     MochaDS.ButtonGroupItem {
                         iconName: "grid"
-                        text: "Grade"
+                        text: qsTr("Grade")
                         onClicked: root.viewMode = "grid"
                     }
 
                     MochaDS.ButtonGroupItem {
                         iconName: "list"
-                        text: "Lista"
+                        text: qsTr("Lista")
                         onClicked: root.viewMode = "list"
                     }
                 }
             }
 
             MochaDS.Button {
-                text: "Verificar"
+                text: qsTr("Verificar")
                 icon: "rotate-cw"
                 variant: "ghost"
                 loading: root.updatesLoading
@@ -124,13 +130,13 @@ Item {
             }
 
             MochaDS.Button {
-                text: "Atualizar " + (activeCategoryName === "pacman" ? "Pacman" : (activeCategoryName === "aur" ? "AUR" : "Flatpak"))
+                text: qsTr("Atualizar %1").arg(activeCategoryName === "pacman" ? "Pacman" : (activeCategoryName === "aur" ? "AUR" : "Flatpak"))
                 variant: "tonal"
                 size: "sm"
                 disabled: root.updatesLoading || activeModel.length === 0
                 onClicked: {
                     window.consoleLog = "";
-                    window.currentAction = "Atualização de Pacotes";
+                    window.currentAction = qsTr("Atualização de Pacotes");
                     window.terminalModal.open = true;
                     backend.updateCategory(activeCategoryName);
                 }
@@ -138,13 +144,13 @@ Item {
             }
 
             MochaDS.Button {
-                text: "Atualizar Tudo"
+                text: qsTr("Atualizar Tudo")
                 variant: "success"
                 size: "sm"
                 disabled: root.updatesLoading || allUpdates.length === 0
                 onClicked: {
                     window.consoleLog = "";
-                    window.currentAction = "Atualização Completa do Sistema";
+                    window.currentAction = qsTr("Atualização Completa do Sistema");
                     window.terminalModal.open = true;
                     backend.updateCategory("all");
                 }
@@ -185,7 +191,7 @@ Item {
                     }
 
                     Text {
-                        text: "Tudo atualizado!"
+                        text: qsTr("Tudo atualizado!")
                         font.family: MochaDS.Theme.typography.familyBold
                         font.pixelSize: MochaDS.Theme.typography.sizeLg
                         color: MochaDS.Theme.colors.text
@@ -193,7 +199,7 @@ Item {
                     }
 
                     Text {
-                        text: "Nenhuma atualização disponível para esta categoria."
+                        text: qsTr("Nenhuma atualização disponível para esta categoria.")
                         font.family: MochaDS.Theme.typography.family
                         font.pixelSize: MochaDS.Theme.typography.sizeSm
                         color: MochaDS.Theme.colors.subtext0
@@ -245,7 +251,7 @@ Item {
                             }
 
                             Text {
-                                text: modelData.desc || "Sem descrição disponível."
+                                text: modelData.desc || qsTr("Sem descrição disponível.")
                                 font.family: MochaDS.Theme.typography.family
                                 font.pixelSize: MochaDS.Theme.typography.sizeSm
                                 color: MochaDS.Theme.colors.subtext0
@@ -280,12 +286,12 @@ Item {
                         }
 
                         MochaDS.Button {
-                            text: "Atualizar"
+                            text: qsTr("Atualizar")
                             variant: "primary"
                             size: "sm"
                             onClicked: {
                                 window.consoleLog = "";
-                                window.currentAction = "Atualização de " + modelData.title;
+                                window.currentAction = qsTr("Atualização de %1").arg(modelData.title);
                                 window.terminalModal.open = true;
                                 backend.installPackage(modelData.type, modelData.name);
                             }
@@ -318,7 +324,7 @@ Item {
                             MochaDS.Card {
                                 width: parent.width
                                 title: modelData.title
-                                subtitle: "Instalado: v" + modelData.installedVersion
+                                subtitle: qsTr("Instalado: v") + modelData.installedVersion
                                 variant: "outline"
 
                                 header: [
@@ -356,7 +362,7 @@ Item {
                                         spacing: 8
 
                                         Text {
-                                            text: modelData.desc || "Sem descrição disponível."
+                                            text: modelData.desc || qsTr("Sem descrição disponível.")
                                             width: parent.width
                                             elide: Text.ElideRight
                                             maximumLineCount: 1
@@ -371,7 +377,7 @@ Item {
                                             spacing: 6
 
                                             Text {
-                                                text: "Nova versão: "
+                                                text: qsTr("Nova versão: ")
                                                 font.family: MochaDS.Theme.typography.family
                                                 font.pixelSize: MochaDS.Theme.typography.sizeSm
                                                 color: MochaDS.Theme.colors.subtext1
@@ -386,12 +392,12 @@ Item {
                                             }
 
                                             MochaDS.Button {
-                                                text: "Atualizar"
+                                                text: qsTr("Atualizar")
                                                 variant: "primary"
                                                 size: "sm"
                                                 onClicked: {
                                                     window.consoleLog = "";
-                                                    window.currentAction = "Atualização de " + modelData.title;
+                                                    window.currentAction = qsTr("Atualização de %1").arg(modelData.title);
                                                     window.terminalModal.open = true;
                                                     backend.installPackage(modelData.type, modelData.name);
                                                 }

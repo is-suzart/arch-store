@@ -26,7 +26,7 @@ MochaDS.Card {
     }
 
     title: appData ? appData.title : ""
-    subtitle: appData ? "Versão: " + appData.version : ""
+    subtitle: appData ? qsTr("Versão: ") + appData.version : ""
     variant: "default"
     header: [
         Item {
@@ -99,7 +99,7 @@ MochaDS.Card {
                 }
 
                 MochaDS.Badge {
-                    text: "Instalado"
+                    text: qsTr("Instalado")
                     variant: "success"
                     visible: cardRoot.appData ? cardRoot.appData.installed : false
                     Layout.alignment: Qt.AlignVCenter
@@ -158,7 +158,7 @@ MochaDS.Card {
                     }
 
                     MochaDS.Button {
-                        text: "Mais Detalhes"
+                        text: qsTr("Mais Detalhes")
                         variant: "tonal"
                         size: "sm"
                         onClicked: {

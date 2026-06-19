@@ -47,7 +47,7 @@ MochaDS.Sidebar {
             MochaDS.TextField {
                 id: headerSearchField
 
-                placeholder: "Buscar pacotes..."
+                placeholder: qsTr("Buscar pacotes...")
                 iconLeft: "search"
                 width: parent.width - MochaDS.Theme.spacing.lg * 2
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -69,7 +69,7 @@ MochaDS.Sidebar {
 
         MochaDS.SidebarItem {
             icon: "compass"
-            label: "Explorar"
+            label: qsTr("Explorar")
             isActive: window.currentPage === "explore"
             onClicked: {
                 window.currentPage = "explore";
@@ -78,7 +78,7 @@ MochaDS.Sidebar {
 
         MochaDS.SidebarItem {
             icon: "search"
-            label: "Buscar"
+            label: qsTr("Buscar")
             isActive: window.currentPage === "search"
             onClicked: {
                 window.currentPage = "search";
@@ -87,43 +87,51 @@ MochaDS.Sidebar {
 
         MochaDS.SidebarItem {
             icon: "gamepad-2"
-            label: "Jogos"
+            label: qsTr("Jogos")
             isActive: window.currentPage === "gaming"
             onClicked: {
-                window.runWithLoader("Carregando jogos e ferramentas...", function() {
-                    window.refreshInstalledList();
-                    window.currentPage = "gaming";
-                });
+                window.refreshInstalledList();
+                window.currentPage = "gaming";
             }
         }
 
         MochaDS.SidebarItem {
+            icon: "code"
+            label: qsTr("Desenvolvimento")
+            isActive: window.currentPage === "development"
+            onClicked: {
+                window.refreshInstalledList();
+                if (typeof developmentView !== "undefined" && developmentView !== null) {
+                    developmentView.refresh();
+                }
+                window.currentPage = "development";
+            }
+        }
+
+
+        MochaDS.SidebarItem {
             icon: "folder"
-            label: "Instalados"
+            label: qsTr("Instalados")
             isActive: window.currentPage === "installed"
             onClicked: {
-                window.runWithLoader("Carregando aplicativos instalados...", function() {
-                    window.refreshInstalledList();
-                    window.currentPage = "installed";
-                });
+                window.refreshInstalledList();
+                window.currentPage = "installed";
             }
         }
 
         MochaDS.SidebarItem {
             icon: "refresh-cw"
-            label: "Atualizações"
+            label: qsTr("Atualizações")
             isActive: window.currentPage === "updates"
             onClicked: {
-                window.runWithLoader("Buscando atualizações...", function() {
-                    window.refreshInstalledList();
-                    window.currentPage = "updates";
-                });
+                window.refreshInstalledList();
+                window.currentPage = "updates";
             }
         }
 
         MochaDS.SidebarItem {
             icon: "layers"
-            label: "Grupos Pacman"
+            label: qsTr("Grupos Pacman")
 
             Repeater {
                 model: (typeof backend !== "undefined" && backend) ? backend.getAlpmGroups() : []
@@ -154,7 +162,7 @@ MochaDS.Sidebar {
             spacing: MochaDS.Theme.spacing.xs
 
             MochaDS.Button {
-                text: "Configurações"
+                text: qsTr("Configurações")
                 icon: "settings"
                 variant: window.currentPage === "settings" ? "tonal" : "ghost"
                 Layout.fillWidth: true
