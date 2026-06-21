@@ -1,4 +1,5 @@
 import requests
+import shutil
 from typing import List
 from domain.entities import Package
 from domain.repositories import PackageRepository
@@ -6,6 +7,7 @@ from domain.repositories import PackageRepository
 class AurPackageRepository(PackageRepository):
     def __init__(self, alpm_repository=None):
         self.alpm_repository = alpm_repository
+        self.helper = "yay" if shutil.which("yay") else ("paru" if shutil.which("paru") else "yay")
 
     def search(self, query: str) -> List[Package]:
         if not query:
@@ -64,10 +66,10 @@ class AurPackageRepository(PackageRepository):
         return []
 
     def get_install_command(self, pkg_name: str) -> List[str]:
-        return ["yay", "--sudoflags", "-A", "--noconfirm", "-S", pkg_name]
+        return [self.helper, "--sudoflags", "-A", "--noconfirm", "-S", pkg_name]
 
     def get_uninstall_command(self, pkg_name: str) -> List[str]:
-        return ["yay", "--sudoflags", "-A", "--noconfirm", "-Rns", pkg_name]
+        return [self.helper, "--sudoflags", "-A", "--noconfirm", "-Rns", pkg_name]
 
     def get_updatable(self) -> List[Package]:
         if not self.alpm_repository:

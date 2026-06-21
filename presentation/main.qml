@@ -19,6 +19,8 @@ ApplicationWindow {
     // Console log modal properties
     property string consoleLog: ""
     property string currentAction: ""
+    property bool isActionRunning: false
+    property bool actionSuccess: true
     property var installedApps: []
     // Batch Install properties
     property var selectedBatchApps: []
@@ -153,6 +155,7 @@ ApplicationWindow {
         currentBatchApp = nextApp;
         currentAction = qsTr("Instalação de %1").arg(nextApp.title);
         terminalModal.open = true;
+        isActionRunning = true;
         consoleLog += qsTr("\n=== Iniciando instalação de %1 (%2) ===\n").arg(nextApp.title).arg(nextApp.type);
         backend.installPackage(nextApp.type, nextApp.name);
     }
@@ -222,6 +225,7 @@ ApplicationWindow {
         currentBatchUninstallApp = nextApp;
         currentAction = qsTr("Desinstalação de %1").arg(nextApp.title);
         terminalModal.open = true;
+        isActionRunning = true;
         consoleLog += qsTr("\n=== Iniciando desinstalação de %1 (%2) ===\n").arg(nextApp.title).arg(nextApp.type);
         backend.uninstallPackage(nextApp.type, nextApp.name);
     }
@@ -278,24 +282,35 @@ ApplicationWindow {
         }
         onActionFinished: {
             searchLoading = false;
+            window.actionSuccess = success;
             if (window.isBatchRunning) {
-                if (success)
+                if (success) {
                     toasts.success(qsTr("Instalação de %1 concluída!").arg(window.currentBatchApp ? window.currentBatchApp.title : ""), qsTr("Sucesso"));
-                else
+                    window.processNextBatchItem();
+                } else {
                     toasts.error(qsTr("Falha ao instalar %1.").arg(window.currentBatchApp ? window.currentBatchApp.title : ""), qsTr("Erro"));
-                window.processNextBatchItem();
+                    window.isBatchRunning = false;
+                    window.batchQueue = [];
+                    window.isActionRunning = false;
+                }
             } else if (window.isBatchUninstallRunning) {
-                if (success)
+                if (success) {
                     toasts.success(qsTr("Desinstalação de %1 concluída!").arg(window.currentBatchUninstallApp ? window.currentBatchUninstallApp.title : ""), qsTr("Sucesso"));
-                else
+                    window.processNextBatchUninstallItem();
+                } else {
                     toasts.error(qsTr("Falha ao desinstalar %1.").arg(window.currentBatchUninstallApp ? window.currentBatchUninstallApp.title : ""), qsTr("Erro"));
-                window.processNextBatchUninstallItem();
+                    window.isBatchUninstallRunning = false;
+                    window.batchUninstallQueue = [];
+                    window.isActionRunning = false;
+                }
             } else {
-                terminalModal.open = false;
-                if (success)
+                window.isActionRunning = false;
+                if (success) {
+                    terminalModal.open = false;
                     toasts.success(qsTr("Operação concluída com sucesso!"), qsTr("Sucesso"));
-                else
+                } else {
                     toasts.error(qsTr("A operação falhou. Verifique os logs."), qsTr("Erro"));
+                }
                 runWithLoader(qsTr("Atualizando lista de aplicativos..."), function() {
                     refreshInstalledList();
                     if (searchQuery)
@@ -562,8 +577,15 @@ ApplicationWindow {
     MochaDS.Modal {
         id: terminalModal
 
-        title: qsTr("%1 em Andamento...").arg(currentAction)
+        title: isActionRunning ? qsTr("%1 em Andamento...").arg(currentAction) : (actionSuccess ? qsTr("%1 Concluído").arg(currentAction) : qsTr("Falha na %1").arg(currentAction))
         size: "lg"
+
+        onOpenChanged: {
+            if (open) {
+                isActionRunning = true;
+                actionSuccess = true;
+            }
+        }
 
         ColumnLayout {
             width: parent.width
@@ -572,6 +594,7 @@ ApplicationWindow {
 
             RowLayout {
                 Layout.fillWidth: true
+                visible: isActionRunning
 
                 MochaDS.CozySpinner {
                     size: 24
@@ -582,6 +605,26 @@ ApplicationWindow {
                     font.family: MochaDS.Theme.typography.family
                     font.pixelSize: MochaDS.Theme.typography.sizeSm
                     color: MochaDS.Theme.colors.subtext0
+                }
+
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                visible: !isActionRunning
+                spacing: 8
+
+                MochaDS.LucideIcon {
+                    name: actionSuccess ? "check-circle" : "alert-circle"
+                    size: 20
+                    color: actionSuccess ? MochaDS.Theme.colors.success : MochaDS.Theme.colors.danger
+                }
+
+                Text {
+                    text: actionSuccess ? qsTr("Operação concluída com sucesso!") : qsTr("A operação falhou. Verifique os logs abaixo.")
+                    font.family: MochaDS.Theme.typography.familyMedium
+                    font.pixelSize: MochaDS.Theme.typography.sizeSm
+                    color: actionSuccess ? MochaDS.Theme.colors.success : MochaDS.Theme.colors.danger
                 }
 
             }
@@ -621,6 +664,26 @@ ApplicationWindow {
             }
 
         }
+
+        footer: [
+            RowLayout {
+                width: parent.width
+
+                Item {
+                    Layout.fillWidth: true
+                }
+
+                MochaDS.Button {
+                    text: qsTr("Fechar")
+                    variant: actionSuccess ? "primary" : "danger"
+                    size: "md"
+                    visible: !isActionRunning
+                    onClicked: {
+                        terminalModal.open = false;
+                    }
+                }
+            }
+        ]
 
     }
 

@@ -24,12 +24,19 @@ from domain.usecases.get_gaming_packages import GetGamingPackagesUseCase
 # Presentation layer
 from presentation.backend import Backend
 
+def get_base_path():
+    import sys
+    from pathlib import Path
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        return Path(sys._MEIPASS)
+    return Path(__file__).parent.absolute()
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     from PySide6.QtCore import QTranslator, QLocale
     translator = QTranslator()
-    current_dir = Path(__file__).parent.absolute()
+    current_dir = get_base_path()
     locale_dir = current_dir / "locale"
     
     # Read language preference from config.json
@@ -62,7 +69,6 @@ if __name__ == "__main__":
     from presentation.system_icon_provider import SystemIconProvider
     engine.addImageProvider("theme", SystemIconProvider())
 
-    current_dir = Path(__file__).parent.absolute()
     engine.addImportPath(str(current_dir / "qml_modules"))
 
     # Dependency Injection Setup

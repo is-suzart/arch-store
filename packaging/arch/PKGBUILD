@@ -1,0 +1,39 @@
+# Maintainer: Arch Store Contributors
+pkgname=arch-store
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="A modern application store for Arch Linux (ALPM, AUR, Flatpak)"
+arch=('any')
+url="https://github.com/is-suzart/arch-store"
+license=('MIT')
+depends=('python' 'pyside6' 'pyalpm' 'python-gobject' 'python-requests' 'flatpak' 'appstream' 'zenity')
+optdepends=('yay: para suporte e gerenciamento de pacotes do AUR')
+source=("arch-store.desktop"
+        "arch-store")
+sha256sums=('SKIP'
+            'SKIP')
+
+package() {
+    # Criar diretórios
+    install -d "${pkgdir}/usr/share/arch-store"
+    install -d "${pkgdir}/usr/bin"
+    install -d "${pkgdir}/usr/share/applications"
+
+    # Copiar código-fonte local para /usr/share/arch-store
+    cp -r "${srcdir}/../../../data" "${pkgdir}/usr/share/arch-store/"
+    cp -r "${srcdir}/../../../domain" "${pkgdir}/usr/share/arch-store/"
+    cp -r "${srcdir}/../../../locale" "${pkgdir}/usr/share/arch-store/"
+    cp -r "${srcdir}/../../../presentation" "${pkgdir}/usr/share/arch-store/"
+    cp -r "${srcdir}/../../../qml_modules" "${pkgdir}/usr/share/arch-store/"
+    cp "${srcdir}/../../../main.py" "${pkgdir}/usr/share/arch-store/"
+    cp "${srcdir}/../../../askpass.sh" "${pkgdir}/usr/share/arch-store/"
+
+    # Dar permissão de execução ao askpass
+    chmod +x "${pkgdir}/usr/share/arch-store/askpass.sh"
+
+    # Instalar wrapper executável
+    install -Dm755 "${srcdir}/arch-store" "${pkgdir}/usr/bin/arch-store"
+
+    # Instalar atalho .desktop
+    install -Dm644 "${srcdir}/arch-store.desktop" "${pkgdir}/usr/share/applications/arch-store.desktop"
+}

@@ -287,15 +287,18 @@ class Backend(QObject):
             self.logReceived.emit(self.tr("Another operation is already running!"))
             return
 
+        import shutil
+        helper = "yay" if shutil.which("yay") else ("paru" if shutil.which("paru") else "yay")
+
         if category == "pacman":
             cmd = ["sudo", "-A", "pacman", "-Syu", "--noconfirm"]
         elif category == "flatpak":
             # Update both system and user, non-interactively
             cmd = ["flatpak", "update", "-y", "--noninteractive"]
         elif category == "aur":
-            cmd = ["yay", "--sudo", "sudo", "-A", "-Sua", "--noconfirm"]
+            cmd = [helper, "--sudo", "sudo", "-A", "-Sua", "--noconfirm"]
         elif category == "all":
-            cmd = ["sh", "-c", "sudo -A pacman -Syu --noconfirm && yay --sudo sudo -A -Sua --noconfirm && flatpak update -y --noninteractive"]
+            cmd = ["sh", "-c", f"sudo -A pacman -Syu --noconfirm && {helper} --sudo sudo -A -Sua --noconfirm && flatpak update -y --noninteractive"]
         else:
             self.logReceived.emit(self.tr("Unknown update category."))
             return
