@@ -13,27 +13,58 @@ Item {
     property var aurUpdates: []
     property bool updatesLoading: false
     property string viewMode: "list" // "list" or "grid"
+    // Active model based on tab index
+    readonly property var activeModel: {
+        if (updateTabs.currentIndex === 0)
+            return pacmanUpdates;
+
+        if (updateTabs.currentIndex === 1)
+            return aurUpdates;
+
+        return flatpakUpdates;
+    }
+    readonly property string activeCategoryName: {
+        if (updateTabs.currentIndex === 0)
+            return "pacman";
+
+        if (updateTabs.currentIndex === 1)
+            return "aur";
+
+        return "flatpak";
+    }
 
     function refresh() {
         updatesLoading = true;
         updatesTimer.start();
     }
 
+    Component.onCompleted: {
+        refresh();
+    }
+    onVisibleChanged: {
+        if (visible)
+            refresh();
+
+    }
+
     Timer {
         id: updatesTimer
+
         interval: 150
         repeat: false
         onTriggered: {
-            var list = backend.getUpdatablePackages();
+            var list = JSON.parse(backend.getUpdatablePackages());
             allUpdates = list;
-            
             var pac = [];
             var flt = [];
             var aur = [];
             for (var i = 0; i < list.length; i++) {
-                if (list[i].type === "pacman") pac.push(list[i]);
-                else if (list[i].type === "flatpak") flt.push(list[i]);
-                else if (list[i].type === "aur") aur.push(list[i]);
+                if (list[i].type === "pacman")
+                    pac.push(list[i]);
+                else if (list[i].type === "flatpak")
+                    flt.push(list[i]);
+                else if (list[i].type === "aur")
+                    aur.push(list[i]);
             }
             pacmanUpdates = pac;
             flatpakUpdates = flt;
@@ -42,64 +73,46 @@ Item {
         }
     }
 
-    Component.onCompleted: {
-        refresh();
-    }
-
-    onVisibleChanged: {
-        if (visible) {
-            refresh();
-        }
-    }
-
-    // Active model based on tab index
-    readonly property var activeModel: {
-        if (updateTabs.currentIndex === 0) return pacmanUpdates;
-        if (updateTabs.currentIndex === 1) return aurUpdates;
-        return flatpakUpdates;
-    }
-
-    readonly property string activeCategoryName: {
-        if (updateTabs.currentIndex === 0) return "pacman";
-        if (updateTabs.currentIndex === 1) return "aur";
-        return "flatpak";
-    }
-
     ColumnLayout {
         anchors.fill: parent
         spacing: 20
 
-        // Header section
-        RowLayout {
+        // Header section — two rows
+        ColumnLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: implicitHeight
-            spacing: MochaDS.Theme.spacing.md
+            spacing: MochaDS.Theme.spacing.sm
 
-            Text {
-                text: qsTr("Atualizações do Sistema")
-                font.family: MochaDS.Theme.typography.familyBold
-                font.pixelSize: MochaDS.Theme.typography.sizeH2
-                color: MochaDS.Theme.colors.text
+            // Row 1: Title + Category tabs
+            RowLayout {
                 Layout.fillWidth: true
+                spacing: MochaDS.Theme.spacing.md
+
+                Text {
+                    text: qsTr("Atualizações do Sistema")
+                    font.family: MochaDS.Theme.typography.familyBold
+                    font.pixelSize: MochaDS.Theme.typography.sizeH2
+                    color: MochaDS.Theme.colors.text
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                // Tab Selector (Segmented)
+                MochaDS.Tabs {
+                    id: updateTabs
+
+                    model: [qsTr("Pacman (%1)").arg(pacmanUpdates.length), qsTr("AUR (%1)").arg(aurUpdates.length), qsTr("Flatpak (%1)").arg(flatpakUpdates.length)]
+                    currentIndex: 0
+                    variant: "segmented"
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
             }
 
-            // Tab Selector (Segmented)
-            MochaDS.Tabs {
-                id: updateTabs
-                model: [
-                    qsTr("Pacman (%1)").arg(pacmanUpdates.length),
-                    qsTr("AUR (%1)").arg(aurUpdates.length),
-                    qsTr("Flatpak (%1)").arg(flatpakUpdates.length)
-                ]
-                currentIndex: 0
-                variant: "segmented"
-                Layout.preferredWidth: 380
-                Layout.alignment: Qt.AlignVCenter
-            }
-
-            Row {
-                Layout.alignment: Qt.AlignVCenter
-                spacing: 4
+            // Row 2: View toggle + action buttons
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: MochaDS.Theme.spacing.sm
 
                 MochaDS.ButtonGroup {
                     expand: false
@@ -116,46 +129,54 @@ Item {
                         text: qsTr("Lista")
                         onClicked: root.viewMode = "list"
                     }
+
                 }
+
+                Item {
+                    Layout.fillWidth: true
+                }
+
+                MochaDS.Button {
+                    text: qsTr("Verificar")
+                    icon: "rotate-cw"
+                    variant: "ghost"
+                    size: "sm"
+                    loading: root.updatesLoading
+                    disabled: root.updatesLoading
+                    onClicked: root.refresh()
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                MochaDS.Button {
+                    text: qsTr("Atualizar %1").arg(activeCategoryName === "pacman" ? "Pacman" : (activeCategoryName === "aur" ? "AUR" : "Flatpak"))
+                    variant: "tonal"
+                    size: "sm"
+                    disabled: root.updatesLoading || activeModel.length === 0
+                    onClicked: {
+                        window.consoleLog = "";
+                        window.currentAction = qsTr("Atualização de Pacotes");
+                        window.terminalModal.open = true;
+                        backend.updateCategory(activeCategoryName);
+                    }
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                MochaDS.Button {
+                    text: qsTr("Atualizar Tudo")
+                    variant: "success"
+                    size: "sm"
+                    disabled: root.updatesLoading || allUpdates.length === 0
+                    onClicked: {
+                        window.consoleLog = "";
+                        window.currentAction = qsTr("Atualização Completa do Sistema");
+                        window.terminalModal.open = true;
+                        backend.updateCategory("all");
+                    }
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
             }
 
-            MochaDS.Button {
-                text: qsTr("Verificar")
-                icon: "rotate-cw"
-                variant: "ghost"
-                loading: root.updatesLoading
-                disabled: root.updatesLoading
-                onClicked: root.refresh()
-                Layout.alignment: Qt.AlignVCenter
-            }
-
-            MochaDS.Button {
-                text: qsTr("Atualizar %1").arg(activeCategoryName === "pacman" ? "Pacman" : (activeCategoryName === "aur" ? "AUR" : "Flatpak"))
-                variant: "tonal"
-                size: "sm"
-                disabled: root.updatesLoading || activeModel.length === 0
-                onClicked: {
-                    window.consoleLog = "";
-                    window.currentAction = qsTr("Atualização de Pacotes");
-                    window.terminalModal.open = true;
-                    backend.updateCategory(activeCategoryName);
-                }
-                Layout.alignment: Qt.AlignVCenter
-            }
-
-            MochaDS.Button {
-                text: qsTr("Atualizar Tudo")
-                variant: "success"
-                size: "sm"
-                disabled: root.updatesLoading || allUpdates.length === 0
-                onClicked: {
-                    window.consoleLog = "";
-                    window.currentAction = qsTr("Atualização Completa do Sistema");
-                    window.terminalModal.open = true;
-                    backend.updateCategory("all");
-                }
-                Layout.alignment: Qt.AlignVCenter
-            }
         }
 
         // Main content area
@@ -172,6 +193,7 @@ Item {
                     size: 48
                     anchors.centerIn: parent
                 }
+
             }
 
             // Empty state
@@ -205,12 +227,15 @@ Item {
                         color: MochaDS.Theme.colors.subtext0
                         Layout.alignment: Qt.AlignHCenter
                     }
+
                 }
+
             }
 
             // List View
             MochaDS.CozyList {
                 id: updatesListView
+
                 anchors.fill: parent
                 visible: !root.updatesLoading && root.viewMode === "list" && activeModel.length > 0
                 model: root.activeModel
@@ -248,6 +273,7 @@ Item {
                                     text: modelData.type.toUpperCase()
                                     variant: modelData.type === "flatpak" ? "secondary" : (modelData.type === "aur" ? "warning" : "primary")
                                 }
+
                             }
 
                             Text {
@@ -258,6 +284,7 @@ Item {
                                 elide: Text.ElideRight
                                 Layout.fillWidth: true
                             }
+
                         }
 
                         RowLayout {
@@ -283,6 +310,7 @@ Item {
                                 font.pixelSize: MochaDS.Theme.typography.sizeSm
                                 color: MochaDS.Theme.colors.green
                             }
+
                         }
 
                         MochaDS.Button {
@@ -297,13 +325,17 @@ Item {
                             }
                             Layout.alignment: Qt.AlignVCenter
                         }
+
                     }
+
                 }
+
             }
 
             // Grid View (Card View)
             Flickable {
                 id: updatesGridView
+
                 anchors.fill: parent
                 contentHeight: updatesGrid.height + MochaDS.Theme.spacing.xxl
                 clip: true
@@ -311,6 +343,7 @@ Item {
 
                 MochaDS.CozyGrid {
                     id: updatesGrid
+
                     width: parent.width - MochaDS.Theme.spacing.md
                     mobile: false
                     model: root.activeModel
@@ -322,15 +355,15 @@ Item {
                             sm: 12
 
                             MochaDS.Card {
-                                width: parent.width
-                                title: modelData.title
-                                subtitle: qsTr("Instalado: v") + modelData.installedVersion
-                                variant: "outline"
+                                id: updateCard
 
+                                width: parent.width
+                                variant: "outline"
+                                clickable: true
                                 header: [
                                     Item {
-                                        width: parent.width
-                                        height: 54
+                                        width: updateCard.width
+                                        height: 58
 
                                         RowLayout {
                                             anchors.fill: parent
@@ -338,48 +371,69 @@ Item {
                                             anchors.rightMargin: MochaDS.Theme.spacing.md
 
                                             AppIcon {
-                                                width: 32
-                                                height: 32
+                                                width: 36
+                                                height: 36
                                                 iconSource: modelData.icon || ""
                                                 packageName: modelData.name || ""
                                                 Layout.alignment: Qt.AlignVCenter
                                             }
 
-                                            Item { Layout.fillWidth: true }
+                                            ColumnLayout {
+                                                spacing: 2
+                                                Layout.fillWidth: true
+                                                Layout.alignment: Qt.AlignVCenter
+
+                                                Text {
+                                                    text: modelData.title
+                                                    font.family: MochaDS.Theme.typography.familyBold
+                                                    font.pixelSize: MochaDS.Theme.typography.sizeMd
+                                                    color: MochaDS.Theme.colors.text
+                                                    elide: Text.ElideRight
+                                                    Layout.fillWidth: true
+                                                }
+
+                                                Text {
+                                                    text: modelData.desc || qsTr("Sem descrição.")
+                                                    font.family: MochaDS.Theme.typography.family
+                                                    font.pixelSize: MochaDS.Theme.typography.sizeXs
+                                                    color: MochaDS.Theme.colors.subtext0
+                                                    elide: Text.ElideRight
+                                                    Layout.fillWidth: true
+                                                    maximumLineCount: 1
+                                                }
+
+                                            }
 
                                             MochaDS.Badge {
                                                 text: modelData.type.toUpperCase()
                                                 variant: modelData.type === "flatpak" ? "secondary" : (modelData.type === "aur" ? "warning" : "primary")
                                                 Layout.alignment: Qt.AlignVCenter
                                             }
+
                                         }
+
                                     }
                                 ]
-
                                 content: [
                                     Column {
                                         width: parent.width
-                                        spacing: 8
+                                        spacing: 10
 
-                                        Text {
-                                            text: modelData.desc || qsTr("Sem descrição disponível.")
-                                            width: parent.width
-                                            elide: Text.ElideRight
-                                            maximumLineCount: 1
-                                            font.family: MochaDS.Theme.typography.family
-                                            font.pixelSize: MochaDS.Theme.typography.sizeSm
-                                            color: MochaDS.Theme.colors.subtext0
-                                        }
-
+                                        // Version comparison row
                                         RowLayout {
                                             width: parent.width
-                                            height: implicitHeight
                                             spacing: 6
 
                                             Text {
-                                                text: qsTr("Nova versão: ")
+                                                text: "v" + (modelData.installedVersion || "?")
                                                 font.family: MochaDS.Theme.typography.family
                                                 font.pixelSize: MochaDS.Theme.typography.sizeSm
+                                                color: MochaDS.Theme.colors.subtext1
+                                            }
+
+                                            MochaDS.LucideIcon {
+                                                name: "arrow-right"
+                                                size: 12
                                                 color: MochaDS.Theme.colors.subtext1
                                             }
 
@@ -391,23 +445,30 @@ Item {
                                                 Layout.fillWidth: true
                                             }
 
-                                            MochaDS.Button {
-                                                text: qsTr("Atualizar")
-                                                variant: "primary"
-                                                size: "sm"
-                                                onClicked: {
-                                                    window.consoleLog = "";
-                                                    window.currentAction = qsTr("Atualização de %1").arg(modelData.title);
-                                                    window.terminalModal.open = true;
-                                                    backend.installPackage(modelData.type, modelData.name);
-                                                }
+                                        }
+
+                                        // Update button full width
+                                        MochaDS.Button {
+                                            text: qsTr("Atualizar")
+                                            variant: "primary"
+                                            size: "sm"
+                                            width: parent.width
+                                            onClicked: {
+                                                window.consoleLog = "";
+                                                window.currentAction = qsTr("Atualização de %1").arg(modelData.title);
+                                                window.terminalModal.open = true;
+                                                backend.installPackage(modelData.type, modelData.name);
                                             }
                                         }
+
                                     }
                                 ]
                             }
+
                         }
+
                     }
+
                 }
 
                 MochaDS.ScrollBar {
@@ -417,7 +478,11 @@ Item {
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                 }
+
             }
+
         }
+
     }
+
 }

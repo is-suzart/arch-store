@@ -8,7 +8,7 @@ Item {
     id: root
 
     // View mode: "grid" or "list"
-    property string viewMode: "grid"
+    property string viewMode: "list"
     property bool listLoading: false
 
     Timer {
@@ -17,7 +17,7 @@ Item {
         interval: 150 // Tiny delay to allow loader visual transition
         repeat: false
         onTriggered: {
-            window.refreshInstalledList();
+            window.loadInstalledApps();
             root.listLoading = false;
         }
     }

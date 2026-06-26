@@ -9,6 +9,39 @@ MochaDS.Sidebar {
     // Expose the search text field's text property for external access (e.g. main.qml's searchFor)
     property alias searchText: headerSearchField.text
 
+    property var alpmGroups: []
+
+    Component.onCompleted: {
+        if (typeof backend !== "undefined" && backend) {
+            try {
+                var raw = backend.getAlpmGroups();
+                var parsed = JSON.parse(raw);
+                var formatted = [];
+                for (var i = 0; i < parsed.length; i++) {
+                    var item = parsed[i];
+                    if (typeof item === "string") {
+                        var label = item;
+                        if (item === "gnome") label = qsTr("Ambiente GNOME");
+                        else if (item === "kde-system") label = qsTr("Ambiente KDE");
+                        else if (item === "xfce4") label = qsTr("Ambiente XFCE");
+                        else if (item === "qt6") label = qsTr("Desenvolvimento Qt6");
+                        else if (item === "base-devel") label = qsTr("Desenvolvimento Base");
+                        else if (item === "xorg") label = qsTr("Servidor Xorg");
+                        else if (item === "mate") label = qsTr("Ambiente MATE");
+                        else if (item === "lxqt") label = qsTr("Ambiente LXQt");
+                        else if (item === "deepin") label = qsTr("Ambiente Deepin");
+                        formatted.push({ "name": item, "label": label });
+                    } else if (item && typeof item === "object") {
+                        formatted.push(item);
+                    }
+                }
+                alpmGroups = formatted;
+            } catch (e) {
+                console.log("Error loading ALPM groups:", e);
+            }
+        }
+    }
+
     //anchors.verticalCenter: parent.verticalCenter
     height: parent.height
     anchors.fill: parentfill
@@ -90,7 +123,6 @@ MochaDS.Sidebar {
             label: qsTr("Jogos")
             isActive: window.currentPage === "gaming"
             onClicked: {
-                window.refreshInstalledList();
                 window.currentPage = "gaming";
             }
         }
@@ -100,10 +132,6 @@ MochaDS.Sidebar {
             label: qsTr("Desenvolvimento")
             isActive: window.currentPage === "development"
             onClicked: {
-                window.refreshInstalledList();
-                if (typeof developmentView !== "undefined" && developmentView !== null) {
-                    developmentView.refresh();
-                }
                 window.currentPage = "development";
             }
         }
@@ -114,7 +142,6 @@ MochaDS.Sidebar {
             label: qsTr("Instalados")
             isActive: window.currentPage === "installed"
             onClicked: {
-                window.refreshInstalledList();
                 window.currentPage = "installed";
             }
         }
@@ -124,7 +151,6 @@ MochaDS.Sidebar {
             label: qsTr("Atualizações")
             isActive: window.currentPage === "updates"
             onClicked: {
-                window.refreshInstalledList();
                 window.currentPage = "updates";
             }
         }
@@ -134,7 +160,7 @@ MochaDS.Sidebar {
             label: qsTr("Grupos Pacman")
 
             Repeater {
-                model: (typeof backend !== "undefined" && backend) ? backend.getAlpmGroups() : []
+                model: rootSidebar.alpmGroups
 
                 delegate: MochaDS.SidebarItem {
                     icon: modelData.name === "qt6" ? "code" : "monitor"

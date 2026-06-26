@@ -20,8 +20,8 @@ Flickable {
         interval: 150
         repeat: false
         onTriggered: {
-            devGrid.devApps = backend.getDevelopmentPackages();
-            heroApps = backend.getDevelopmentHeroApps();
+            devGrid.devApps = JSON.parse(backend.getDevelopmentPackages());
+            heroApps = JSON.parse(backend.getDevelopmentHeroApps());
             loading = false;
         }
     }

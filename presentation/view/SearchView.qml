@@ -14,51 +14,48 @@ Item {
 
     onVisibleChanged: {
         if (visible && typeof backend !== "undefined" && backend) {
-            suggestions = backend.getFeaturedPackages();
+            suggestions = JSON.parse(backend.getFeaturedPackages());
         }
     }
 
     Component.onCompleted: {
         if (typeof backend !== "undefined" && backend) {
-            suggestions = backend.getFeaturedPackages();
+            suggestions = JSON.parse(backend.getFeaturedPackages());
         }
     }
 
-    ColumnLayout {
+    // Search Loading Spinner
+    MochaDS.CozySpinner {
+        size: 48
+        anchors.centerIn: parent
+        visible: root.loading
+    }
+
+    // Main content area (when not loading)
+    Flickable {
+        id: mainFlickable
+
         anchors.fill: parent
-        spacing: 16
+        anchors.rightMargin: 10 // Space for scrollbar
+        contentHeight: mainContent.height + 40
+        clip: true
+        visible: !root.loading
 
-        // Search Loading
-        Item {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 100
-            visible: root.loading
+        Column {
+            id: mainContent
+            width: parent.width - 20
+            spacing: 24
 
-            MochaDS.CozySpinner {
-                size: 48
-                anchors.centerIn: parent
-            }
-        }
-
-        // Suggestion Grid (when query is empty or too short)
-        Flickable {
-            id: suggestionFlickable
-
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            contentHeight: suggestionContent.height + 40
-            clip: true
-            visible: !root.loading && root.query.trim().length < 3
-
-            ColumnLayout {
-                id: suggestionContent
-                width: suggestionFlickable.width - 20
+            // Suggestions Content (when query < 3)
+            Column {
+                width: parent.width
                 spacing: 24
+                visible: root.query.trim().length < 3
 
                 // Welcome / Tip card
                 Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 140
+                    width: parent.width
+                    height: 140
                     color: MochaDS.Theme.colors.mantle
                     radius: MochaDS.Theme.geometry.radiusMd
                     border.color: MochaDS.Theme.colors.surface0
@@ -110,73 +107,90 @@ Item {
                 }
 
                 // Suggestions Grid
-                Flow {
-                    Layout.fillWidth: true
-                    width: suggestionContent.width
-                    spacing: MochaDS.Theme.spacing.lg
+                MochaDS.CozyGrid {
+                    id: suggestionGrid
+                    width: parent.width
+                    mobile: false
+                    model: root.suggestions
                     visible: root.suggestions && root.suggestions.length > 0
 
-                    Repeater {
-                        model: root.suggestions
+                    delegate: Component {
+                        MochaDS.CozyGridCol {
+                            lg: 4
+                            md: 6
+                            sm: 12
 
-                        delegate: SearchAppCard {
-                            width: Math.max(280, (suggestionContent.width - MochaDS.Theme.spacing.lg * 3) / 3)
-                            appData: modelData
-                            onDetailsClicked: {
-                                window.selectedApp = modelData;
-                                window.appDetailModal.open = true;
+                            SearchAppCard {
+                                width: parent.width
+                                appData: modelData
+                                onDetailsClicked: {
+                                    window.selectedApp = modelData;
+                                    window.appDetailModal.open = true;
+                                }
                             }
                         }
                     }
                 }
             }
 
-            MochaDS.ScrollBar {
-                flickable: suggestionFlickable
-                orientation: "vertical"
-                anchors.right: parent.right
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
-            }
-        }
+            // Search Results Content (when query >= 3)
+            Column {
+                width: parent.width
+                spacing: 24
+                visible: root.query.trim().length >= 3
 
-        // Search Results Grid
-        Flickable {
-            id: searchFlickable
+                // Results Header
+                Text {
+                    text: qsTr("Resultados da Busca")
+                    font.family: MochaDS.Theme.typography.familyBold
+                    font.pixelSize: MochaDS.Theme.typography.sizeXl
+                    color: MochaDS.Theme.colors.text
+                    visible: root.results && root.results.length > 0
+                }
 
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            contentHeight: resultsFlow.height + 40
-            clip: true
-            visible: !root.loading && root.query.trim().length >= 3
-
-            Flow {
-                id: resultsFlow
-
-                width: searchFlickable.width - 20
-                spacing: MochaDS.Theme.spacing.lg
-
-                Repeater {
+                // Results Grid
+                MochaDS.CozyGrid {
+                    id: resultsGrid
+                    width: parent.width
+                    mobile: false
                     model: root.results
+                    visible: root.results && root.results.length > 0
 
-                    delegate: SearchAppCard {
-                        width: Math.max(280, (parent.width - MochaDS.Theme.spacing.lg * 3) / 3)
-                        appData: modelData
-                        onDetailsClicked: {
-                            window.selectedApp = modelData;
-                            window.appDetailModal.open = true;
+                    delegate: Component {
+                        MochaDS.CozyGridCol {
+                            lg: 4
+                            md: 6
+                            sm: 12
+
+                            SearchAppCard {
+                                width: parent.width
+                                appData: modelData
+                                onDetailsClicked: {
+                                    window.selectedApp = modelData;
+                                    window.appDetailModal.open = true;
+                                }
+                            }
                         }
                     }
                 }
-            }
 
-            MochaDS.ScrollBar {
-                flickable: searchFlickable
-                orientation: "vertical"
-                anchors.right: parent.right
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
+                // Empty state for search results
+                Text {
+                    text: qsTr("Nenhum aplicativo encontrado")
+                    font.family: MochaDS.Theme.typography.family
+                    font.pixelSize: MochaDS.Theme.typography.sizeLg
+                    color: MochaDS.Theme.colors.subtext0
+                    visible: !root.results || root.results.length === 0
+                }
             }
+        }
+
+        MochaDS.ScrollBar {
+            flickable: mainFlickable
+            orientation: "vertical"
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
         }
     }
 }

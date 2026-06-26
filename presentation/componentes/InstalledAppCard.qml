@@ -10,19 +10,7 @@ MochaDS.Card {
 
     signal uninstallClicked()
 
-    MouseArea {
-        id: cardMouseArea
-        anchors.fill: parent
-        onClicked: {
-            if (cardRoot.appData) {
-                window.toggleBatchUninstallApp(cardRoot.appData);
-            }
-        }
-        Component.onCompleted: {
-            cardMouseArea.parent = cardRoot;
-        }
-    }
-
+    clickable: true
     title: appData ? appData.title : ""
     subtitle: appData ? qsTr("Versão: ") + appData.version : ""
     variant: "default"
@@ -50,6 +38,9 @@ MochaDS.Card {
                     // Glassmorphic selection circle indicator (danger themed for uninstallation)
                     Rectangle {
                         id: selectionIndicator
+
+                        readonly property bool isSelected: (cardRoot.appData && cardRoot.appData.name) ? window.isBatchUninstallAppSelected(cardRoot.appData.name) : false
+
                         width: 16
                         height: 16
                         radius: 8
@@ -70,19 +61,19 @@ MochaDS.Card {
                             visible: parent.isSelected
                         }
 
-                        readonly property bool isSelected: (cardRoot.appData && cardRoot.appData.name) ? window.isBatchUninstallAppSelected(cardRoot.appData.name) : false
-
                         MouseArea {
                             anchors.fill: parent
                             // Extra click margins for better UX
                             anchors.margins: -8
                             onClicked: {
-                                if (cardRoot.appData) {
+                                if (cardRoot.appData)
                                     window.toggleBatchUninstallApp(cardRoot.appData);
-                                }
+
                             }
                         }
+
                     }
+
                 }
 
                 Item {
@@ -103,6 +94,7 @@ MochaDS.Card {
         Column {
             width: parent.width
             spacing: 8
+            z: 1
 
             Text {
                 text: cardRoot.appData ? (cardRoot.appData.title || cardRoot.appData.name) : ""
@@ -112,7 +104,6 @@ MochaDS.Card {
                 color: MochaDS.Theme.colors.text
                 wrapMode: Text.Wrap
             }
-
 
             Text {
                 text: cardRoot.appData ? cardRoot.appData.desc : ""
@@ -162,4 +153,17 @@ MochaDS.Card {
 
         }
     ]
+
+    MouseArea {
+        id: cardMouseArea
+
+        anchors.fill: parent
+        z: -1
+        onClicked: {
+            if (cardRoot.appData)
+                window.toggleBatchUninstallApp(cardRoot.appData);
+
+        }
+    }
+
 }

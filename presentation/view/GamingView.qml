@@ -20,8 +20,8 @@ Flickable {
         interval: 150
         repeat: false
         onTriggered: {
-            gamingGrid.gamingApps = backend.getGamingPackages();
-            heroApps = backend.getGamingHeroApps();
+            gamingGrid.gamingApps = JSON.parse(backend.getGamingPackages());
+            heroApps = JSON.parse(backend.getGamingHeroApps());
             loading = false;
         }
     }

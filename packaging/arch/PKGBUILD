@@ -1,39 +1,61 @@
-# Maintainer: Arch Store Contributors
+# Maintainer: Igor Suzart <igorarsuzart@gmail.com>
 pkgname=arch-store
 pkgver=1.0.0
 pkgrel=1
 pkgdesc="A modern application store for Arch Linux (ALPM, AUR, Flatpak)"
-arch=('any')
+arch=('x86_64')
 url="https://github.com/is-suzart/arch-store"
 license=('MIT')
-depends=('python' 'pyside6' 'pyalpm' 'python-gobject' 'python-requests' 'flatpak' 'appstream' 'zenity')
-optdepends=('yay: para suporte e gerenciamento de pacotes do AUR')
-source=("arch-store.desktop"
-        "arch-store")
-sha256sums=('SKIP'
-            'SKIP')
+depends=('qt6-declarative' 'qt6-svg' 'flatpak' 'appstream' 'zenity')
+makedepends=('rust' 'cargo' 'cmake' 'extra-cmake-modules' 'pkgconf' 'qt6-base')
+optdepends=('yay: para suporte e gerenciamento de pacotes do AUR'
+            'paru: para suporte e gerenciamento de pacotes do AUR')
+source=("arch-store.desktop")
+sha256sums=('SKIP')
+options=(!lto)
+
+build() {
+    local pkgroot
+    pkgroot="$(realpath "$startdir/../..")"
+
+    # Garante que o cargo do rustup está no PATH
+    export PATH="$HOME/.cargo/bin:$PATH"
+    export CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"
+
+    # O makepkg padrão força -Wl,--as-needed nos LDFLAGS.
+    # Isso faz o rust-lld descartar objetos estáticos C++ do cxx-qt-lib que ele acha
+    # desnecessários antes de linkar os símbolos do Rust, quebrando a compilação.
+    export LDFLAGS="${LDFLAGS//-Wl,--as-needed/}"
+    export RUSTFLAGS="-C link-arg=-Wl,--no-as-needed"
+
+    # Usa um target dir isolado dentro do srcdir do makepkg
+    # Isso garante build limpo e evita conflitos de cache
+    export CARGO_TARGET_DIR="$srcdir/target"
+
+    cd "$pkgroot/src-rust"
+    cargo build --release
+}
 
 package() {
-    # Criar diretórios
-    install -d "${pkgdir}/usr/share/arch-store"
-    install -d "${pkgdir}/usr/bin"
-    install -d "${pkgdir}/usr/share/applications"
+    local pkgroot
+    pkgroot="$(realpath "$startdir/../..")"
 
-    # Copiar código-fonte local para /usr/share/arch-store
-    cp -r "${srcdir}/../../../data" "${pkgdir}/usr/share/arch-store/"
-    cp -r "${srcdir}/../../../domain" "${pkgdir}/usr/share/arch-store/"
-    cp -r "${srcdir}/../../../locale" "${pkgdir}/usr/share/arch-store/"
-    cp -r "${srcdir}/../../../presentation" "${pkgdir}/usr/share/arch-store/"
-    cp -r "${srcdir}/../../../qml_modules" "${pkgdir}/usr/share/arch-store/"
-    cp "${srcdir}/../../../main.py" "${pkgdir}/usr/share/arch-store/"
-    cp "${srcdir}/../../../askpass.sh" "${pkgdir}/usr/share/arch-store/"
+    install -d "$pkgdir/usr/share/arch-store"
+    install -d "$pkgdir/usr/bin"
+    install -d "$pkgdir/usr/share/applications"
 
-    # Dar permissão de execução ao askpass
-    chmod +x "${pkgdir}/usr/share/arch-store/askpass.sh"
+    cp -r "$pkgroot/data"         "$pkgdir/usr/share/arch-store/"
+    cp -r "$pkgroot/presentation" "$pkgdir/usr/share/arch-store/"
+    cp -r "$pkgroot/qml_modules"  "$pkgdir/usr/share/arch-store/"
+    cp    "$pkgroot/askpass.sh"   "$pkgdir/usr/share/arch-store/"
+    [[ -d "$pkgroot/locale" ]] && cp -r "$pkgroot/locale" "$pkgdir/usr/share/arch-store/"
 
-    # Instalar wrapper executável
-    install -Dm755 "${srcdir}/arch-store" "${pkgdir}/usr/bin/arch-store"
+    chmod +x "$pkgdir/usr/share/arch-store/askpass.sh"
 
-    # Instalar atalho .desktop
-    install -Dm644 "${srcdir}/arch-store.desktop" "${pkgdir}/usr/share/applications/arch-store.desktop"
+    # O binário fica no CARGO_TARGET_DIR definido no build()
+    install -Dm755 "$srcdir/target/release/arch-store" \
+        "$pkgdir/usr/bin/arch-store"
+
+    install -Dm644 "$srcdir/arch-store.desktop" \
+        "$pkgdir/usr/share/applications/arch-store.desktop"
 }

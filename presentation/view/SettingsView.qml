@@ -16,6 +16,13 @@ Flickable {
         themeSelect.selectedValue = flavor;
         themeSelect.updateLabelFromValue();
         
+        var mode = backend.getConfigStr("theme_mode");
+        if (mode === "system") {
+            themeModeGroup.currentIndex = 1;
+        } else {
+            themeModeGroup.currentIndex = 0;
+        }
+        
         aurToggle.checked = backend.getConfigBool("enable_aur");
         flatpakToggle.checked = backend.getConfigBool("enable_flatpak");
         startupUpdateToggle.checked = backend.getConfigBool("check_updates_startup");
@@ -94,13 +101,65 @@ Flickable {
                         Layout.fillWidth: true
                         spacing: 4
                         Text {
-                            text: qsTr("Tema de Cores")
+                            text: qsTr("Modo do Tema")
                             font.family: MochaDS.Theme.typography.familyMedium
                             font.pixelSize: MochaDS.Theme.typography.sizeMd
                             color: MochaDS.Theme.colors.text
                         }
                         Text {
-                            text: qsTr("Selecione uma das 4 variantes oficiais do Catppuccin")
+                            text: qsTr("Alterne entre o tema Catppuccin original ou as cores do sistema operacional (GTK/Qt)")
+                            font.family: MochaDS.Theme.typography.family
+                            font.pixelSize: MochaDS.Theme.typography.sizeSm
+                            color: MochaDS.Theme.colors.subtext0
+                        }
+                    }
+
+                    MochaDS.ButtonGroup {
+                        id: themeModeGroup
+                        expand: false
+                        Layout.alignment: Qt.AlignVCenter
+
+                        MochaDS.ButtonGroupItem {
+                            text: qsTr("Catppuccin")
+                            onClicked: {
+                                backend.setConfigStr("theme_mode", "catppuccin");
+                                window.themeMode = "catppuccin";
+                                toasts.success(qsTr("Modo de cores definido para Catppuccin."), qsTr("Sucesso"));
+                            }
+                        }
+
+                        MochaDS.ButtonGroupItem {
+                            text: qsTr("Sistema")
+                            onClicked: {
+                                backend.setConfigStr("theme_mode", "system");
+                                window.themeMode = "system";
+                                toasts.success(qsTr("Modo de cores definido para se adaptar ao sistema (GTK/Qt)."), qsTr("Sucesso"));
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 1
+                    color: MochaDS.Theme.colors.surface0
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: MochaDS.Theme.spacing.lg
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 4
+                        Text {
+                            text: qsTr("Sabor do Tema (Flavor)")
+                            font.family: MochaDS.Theme.typography.familyMedium
+                            font.pixelSize: MochaDS.Theme.typography.sizeMd
+                            color: themeSelect.disabled ? MochaDS.Theme.colors.overlay0 : MochaDS.Theme.colors.text
+                        }
+                        Text {
+                            text: qsTr("Selecione uma das 4 variantes oficiais do Catppuccin (desabilitado em modo Sistema)")
                             font.family: MochaDS.Theme.typography.family
                             font.pixelSize: MochaDS.Theme.typography.sizeSm
                             color: MochaDS.Theme.colors.subtext0
@@ -110,6 +169,7 @@ Flickable {
                     MochaDS.Select {
                         id: themeSelect
                         width: 320
+                        disabled: themeModeGroup.currentIndex === 1
                         options: [
                             { value: "latte", label: qsTr("Catppuccin Latte (Claro)") },
                             { value: "frappe", label: qsTr("Catppuccin Frappé (Escuro Suave)") },

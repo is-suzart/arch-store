@@ -14,24 +14,27 @@ Item {
     property string viewMode: "list" // default to list first!
 
     function refresh() {
-        if (!groupName) return;
+        if (!groupName)
+            return ;
+
         loading = true;
         refreshTimer.start();
     }
 
+    onGroupNameChanged: {
+        refresh();
+    }
+
     Timer {
         id: refreshTimer
+
         interval: 150
         repeat: false
         onTriggered: {
-            var list = backend.getGroupPackages(groupName);
+            var list = JSON.parse(backend.getGroupPackages(groupName));
             groupApps = list;
             loading = false;
         }
-    }
-
-    onGroupNameChanged: {
-        refresh();
     }
 
     ColumnLayout {
@@ -47,18 +50,21 @@ Item {
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 2
+
                 Text {
                     text: root.groupLabel !== "" ? root.groupLabel : qsTr("Grupo Pacman")
                     font.family: MochaDS.Theme.typography.familyBold
                     font.pixelSize: MochaDS.Theme.typography.sizeH2
                     color: MochaDS.Theme.colors.text
                 }
+
                 Text {
                     text: qsTr("Pacotes oficiais do Arch Linux pertencentes ao grupo '%1'").arg(root.groupName)
                     font.family: MochaDS.Theme.typography.family
                     font.pixelSize: MochaDS.Theme.typography.sizeSm
                     color: MochaDS.Theme.colors.subtext0
                 }
+
             }
 
             // View Mode Selector
@@ -78,6 +84,7 @@ Item {
                     text: qsTr("Lista")
                     onClicked: root.viewMode = "list"
                 }
+
             }
 
             MochaDS.Button {
@@ -89,6 +96,7 @@ Item {
                 onClicked: root.refresh()
                 Layout.alignment: Qt.AlignVCenter
             }
+
         }
 
         // Content Area
@@ -105,6 +113,7 @@ Item {
                     size: 48
                     anchors.centerIn: parent
                 }
+
             }
 
             // Empty state
@@ -130,12 +139,15 @@ Item {
                         color: MochaDS.Theme.colors.text
                         Layout.alignment: Qt.AlignHCenter
                     }
+
                 }
+
             }
 
             // List View (Default)
             MochaDS.CozyList {
                 id: groupListView
+
                 anchors.fill: parent
                 visible: !root.loading && root.viewMode === "list" && root.groupApps.length > 0
                 model: root.groupApps
@@ -174,11 +186,12 @@ Item {
                                     variant: "primary"
                                 }
 
-                                 MochaDS.Badge {
+                                MochaDS.Badge {
                                     text: qsTr("Instalado")
                                     variant: "success"
                                     visible: modelData.installed
                                 }
+
                             }
 
                             Text {
@@ -189,6 +202,7 @@ Item {
                                 elide: Text.ElideRight
                                 Layout.fillWidth: true
                             }
+
                         }
 
                         RowLayout {
@@ -218,14 +232,19 @@ Item {
                                     }
                                 }
                             }
+
                         }
+
                     }
+
                 }
+
             }
 
             // Grid View
             Flickable {
                 id: groupGridView
+
                 anchors.fill: parent
                 contentHeight: groupGrid.height + MochaDS.Theme.spacing.xxl
                 clip: true
@@ -233,6 +252,7 @@ Item {
 
                 MochaDS.CozyGrid {
                     id: groupGrid
+
                     width: parent.width - MochaDS.Theme.spacing.md
                     mobile: false
                     model: root.groupApps
@@ -244,14 +264,16 @@ Item {
                             sm: 12
 
                             MochaDS.Card {
+                                id: packageCard
+
+                                clickable: true
                                 width: parent.width
-                                 title: modelData.title
+                                title: modelData.title
                                 subtitle: qsTr("Versão: ") + modelData.version
                                 variant: "outline"
-
                                 header: [
                                     Item {
-                                        width: parent.width
+                                        width: packageCard.width
                                         height: 54
 
                                         RowLayout {
@@ -267,17 +289,20 @@ Item {
                                                 Layout.alignment: Qt.AlignVCenter
                                             }
 
-                                            Item { Layout.fillWidth: true }
+                                            Item {
+                                                Layout.fillWidth: true
+                                            }
 
                                             MochaDS.Badge {
                                                 text: modelData.installed ? qsTr("INSTALADO") : qsTr("PACMAN")
                                                 variant: modelData.installed ? "success" : "primary"
                                                 Layout.alignment: Qt.AlignVCenter
                                             }
+
                                         }
+
                                     }
                                 ]
-
                                 content: [
                                     ColumnLayout {
                                         width: parent.width
@@ -298,7 +323,9 @@ Item {
                                             Layout.fillWidth: true
                                             spacing: 6
 
-                                            Item { Layout.fillWidth: true }
+                                            Item {
+                                                Layout.fillWidth: true
+                                            }
 
                                             MochaDS.Button {
                                                 text: qsTr("Mais Detalhes")
@@ -322,12 +349,17 @@ Item {
                                                     backend.installPackage(modelData.type, modelData.name);
                                                 }
                                             }
+
                                         }
+
                                     }
                                 ]
                             }
+
                         }
+
                     }
+
                 }
 
                 MochaDS.ScrollBar {
@@ -337,7 +369,11 @@ Item {
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                 }
+
             }
+
         }
+
     }
+
 }

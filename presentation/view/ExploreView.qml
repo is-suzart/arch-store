@@ -8,11 +8,23 @@ Flickable {
     id: exploreView
 
     property var heroApps: []
+    property bool loading: false
 
     function refreshFeatured() {
-        featuredGrid.featuredApps = backend.getFeaturedPackages();
-        popularGrid.popularApps = backend.getPopularPackages();
-        heroApps = backend.getHeroApps();
+        loading = true;
+        refreshTimer.start();
+    }
+
+    Timer {
+        id: refreshTimer
+        interval: 150
+        repeat: false
+        onTriggered: {
+            featuredGrid.featuredApps = JSON.parse(backend.getFeaturedPackages());
+            popularGrid.popularApps = JSON.parse(backend.getPopularPackages());
+            heroApps = JSON.parse(backend.getHeroApps());
+            loading = false;
+        }
     }
 
     contentHeight: exploreContent.height + MochaDS.Theme.spacing.xxl
@@ -26,6 +38,7 @@ Flickable {
 
         width: parent.width
         spacing: 24
+        visible: !exploreView.loading
 
         // ── Hero Carousel ─────────────────────────────────────────────────────
         HeroCarousel {
@@ -127,6 +140,12 @@ Flickable {
 
         }
 
+    }
+
+    MochaDS.CozySpinner {
+        size: 48
+        anchors.centerIn: parent
+        visible: exploreView.loading
     }
 
     MochaDS.ScrollBar {

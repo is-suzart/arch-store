@@ -10,21 +10,7 @@ MochaDS.Card {
 
     signal detailsClicked()
 
-    MouseArea {
-        id: cardMouseArea
-        z: -1
-        anchors.fill: parent
-        visible: cardRoot.appData ? !cardRoot.appData.installed : false
-        onClicked: {
-            if (cardRoot.appData) {
-                window.toggleBatchApp(cardRoot.appData);
-            }
-        }
-        Component.onCompleted: {
-            cardMouseArea.parent = cardRoot;
-        }
-    }
-
+    clickable: true
     title: appData ? appData.title : ""
     subtitle: appData ? qsTr("Versão: ") + appData.version : ""
     variant: "default"
@@ -52,6 +38,9 @@ MochaDS.Card {
                     // Glassmorphic selection circle indicator
                     Rectangle {
                         id: selectionIndicator
+
+                        readonly property bool isSelected: (cardRoot.appData && cardRoot.appData.name) ? window.isBatchAppSelected(cardRoot.appData.name) : false
+
                         width: 16
                         height: 16
                         radius: 8
@@ -73,19 +62,19 @@ MochaDS.Card {
                             visible: parent.isSelected
                         }
 
-                        readonly property bool isSelected: (cardRoot.appData && cardRoot.appData.name) ? window.isBatchAppSelected(cardRoot.appData.name) : false
-
                         MouseArea {
                             anchors.fill: parent
                             // Extra click margins for better UX
                             anchors.margins: -8
                             onClicked: {
-                                if (cardRoot.appData) {
+                                if (cardRoot.appData)
                                     window.toggleBatchApp(cardRoot.appData);
-                                }
+
                             }
                         }
+
                     }
+
                 }
 
                 Item {
@@ -122,7 +111,6 @@ MochaDS.Card {
                 color: MochaDS.Theme.colors.text
                 wrapMode: Text.Wrap
             }
-
 
             Text {
                 text: cardRoot.appData ? cardRoot.appData.desc : ""
@@ -172,4 +160,21 @@ MochaDS.Card {
 
         }
     ]
+
+    MouseArea {
+        id: cardMouseArea
+
+        z: -1
+        anchors.fill: parent
+        visible: cardRoot.appData ? !cardRoot.appData.installed : false
+        onClicked: {
+            if (cardRoot.appData)
+                window.toggleBatchApp(cardRoot.appData);
+
+        }
+        Component.onCompleted: {
+            cardMouseArea.parent = cardRoot;
+        }
+    }
+
 }

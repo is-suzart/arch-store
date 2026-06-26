@@ -1,11 +1,12 @@
 import "./componentes"
 import "./view"
+import ArchStore 1.0
 import MochaDS 1.0 as MochaDS
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
-ApplicationWindow {
+MochaDS.ApplicationWindow {
     id: window
 
     // Track active page: "explore", "search", "installed"
@@ -48,8 +49,12 @@ ApplicationWindow {
         globalLoaderTimer.start();
     }
 
+    function loadInstalledApps() {
+        installedApps = JSON.parse(backend.getInstalledPackages());
+    }
+
     function refreshInstalledList() {
-        installedApps = backend.getInstalledPackages();
+        loadInstalledApps();
         exploreView.refreshFeatured();
         gamingView.refresh();
         if (typeof developmentView !== "undefined" && developmentView !== null)
@@ -112,7 +117,8 @@ ApplicationWindow {
             temp.push({
             "name": appData.name,
             "title": appData.title || appData.name,
-            "type": appData.type
+            "type": appData.type,
+            "icon": appData.icon || ""
         });
 
         selectedBatchApps = temp;
@@ -182,7 +188,8 @@ ApplicationWindow {
             temp.push({
             "name": appData.name,
             "title": appData.title || appData.name,
-            "type": appData.type
+            "type": appData.type,
+            "icon": appData.icon || ""
         });
 
         selectedBatchUninstallApps = temp;
@@ -237,13 +244,22 @@ ApplicationWindow {
     color: MochaDS.Theme.colors.background
     // Initial load
     Component.onCompleted: {
+        var saved_mode = backend.getConfigStr("theme_mode");
+        if (saved_mode)
+            window.themeMode = saved_mode;
+        else
+            window.themeMode = "catppuccin";
         var saved_flavor = backend.getConfigStr("theme_flavor");
         MochaDS.Theme.flavor = saved_flavor;
-        refreshInstalledList();
+        loadInstalledApps();
         var check_updates = backend.getConfigBool("check_updates_startup");
         if (check_updates)
             updatesView.refresh();
 
+    }
+
+    Backend {
+        id: backend
     }
 
     Timer {
@@ -275,7 +291,7 @@ ApplicationWindow {
             consoleLog += line + "\n";
         }
         onSearchResultsReady: {
-            searchResults = results;
+            searchResults = JSON.parse(results);
         }
         onSearchLoadingChanged: {
             searchLoading = loading;
@@ -329,7 +345,7 @@ ApplicationWindow {
         headerVisible: mainShell.isMobile
         columnCount: 1
         footerHeight: 70
-        footerVisible: (currentPage === "installed" && selectedBatchUninstallApps.length > 0) || (currentPage !== "installed" && selectedBatchApps.length > 0)
+        footerVisible: (currentPage === "installed" && selectedBatchUninstallApps.length > 0) || (currentPage !== "installed" && currentPage !== "updates" && selectedBatchApps.length > 0)
         // 1. Top Header Content
         header: [
             Rectangle {
@@ -395,7 +411,7 @@ ApplicationWindow {
                     anchors.leftMargin: MochaDS.Theme.spacing.lg
                     anchors.rightMargin: MochaDS.Theme.spacing.lg
                     spacing: MochaDS.Theme.spacing.md
-                    visible: window.currentPage !== "installed"
+                    visible: window.currentPage !== "installed" && window.currentPage !== "updates"
 
                     RowLayout {
                         spacing: 8
@@ -430,11 +446,11 @@ ApplicationWindow {
                     }
 
                     MochaDS.Button {
-                        text: qsTr("Instalar em Lote")
+                        text: qsTr("Ver Detalhes")
                         variant: "success"
                         size: "md"
                         onClicked: {
-                            window.startBatchInstallation();
+                            batchInstallDrawer.open = true;
                         }
                     }
 
@@ -481,11 +497,11 @@ ApplicationWindow {
                     }
 
                     MochaDS.Button {
-                        text: qsTr("Desinstalar em Lote")
+                        text: qsTr("Ver Detalhes")
                         variant: "danger"
                         size: "md"
                         onClicked: {
-                            window.startBatchUninstallation();
+                            batchUninstallDrawer.open = true;
                         }
                     }
 
@@ -513,8 +529,15 @@ ApplicationWindow {
 
                 // View 3: Installed View
                 InstalledView {
+                    id: installedView
+
                     anchors.fill: parent
                     visible: currentPage === "installed"
+                    onVisibleChanged: {
+                        if (visible) {
+                            window.clearBatchApps();
+                        }
+                    }
                 }
 
                 // View 4: Gaming View
@@ -539,6 +562,11 @@ ApplicationWindow {
 
                     anchors.fill: parent
                     visible: currentPage === "updates"
+                    onVisibleChanged: {
+                        if (visible) {
+                            window.clearBatchApps();
+                        }
+                    }
                 }
 
                 // View 6: Settings View
@@ -573,19 +601,289 @@ ApplicationWindow {
         appData: selectedApp
     }
 
+    MochaDS.Drawer {
+        id: batchInstallDrawer
+
+        title: qsTr("Fila de Instalação")
+        subtitle: qsTr("Revise os aplicativos selecionados antes de instalar em lote.")
+        position: "right"
+        size: 400
+        footer: [
+            RowLayout {
+                spacing: MochaDS.Theme.spacing.md
+
+                MochaDS.Button {
+                    text: qsTr("Limpar Seleção")
+                    variant: "outline"
+                    Layout.fillWidth: true
+                    onClicked: {
+                        window.clearBatchApps();
+                        batchInstallDrawer.open = false;
+                    }
+                }
+
+                MochaDS.Button {
+                    text: qsTr("Instalar Selecionados")
+                    variant: "success"
+                    Layout.fillWidth: true
+                    onClicked: {
+                        batchInstallDrawer.open = false;
+                        window.startBatchInstallation();
+                    }
+                }
+
+            }
+        ]
+
+        ColumnLayout {
+            width: parent.width
+            spacing: MochaDS.Theme.spacing.md
+
+            Repeater {
+                model: window.selectedBatchApps
+
+                delegate: Rectangle {
+                    Layout.fillWidth: true
+                    height: 60
+                    color: MochaDS.Theme.colors.surface0
+                    radius: MochaDS.Theme.geometry.radiusMd
+                    border.color: MochaDS.Theme.colors.surface1
+                    border.width: 1
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: MochaDS.Theme.spacing.md
+                        spacing: MochaDS.Theme.spacing.sm
+
+                        AppIcon {
+                            width: 36
+                            height: 36
+                            iconSource: modelData.icon || ""
+                            packageName: modelData.name
+                        }
+
+                        Column {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            Text {
+                                text: modelData.title
+                                font.family: MochaDS.Theme.typography.familyBold
+                                font.pixelSize: MochaDS.Theme.typography.sizeMd
+                                color: MochaDS.Theme.colors.text
+                                elide: Text.ElideRight
+                                width: parent.width
+                            }
+
+                            Text {
+                                text: modelData.name
+                                font.family: MochaDS.Theme.typography.family
+                                font.pixelSize: MochaDS.Theme.typography.sizeXs
+                                color: MochaDS.Theme.colors.subtext0
+                                elide: Text.ElideRight
+                                width: parent.width
+                            }
+
+                        }
+
+                        MochaDS.Badge {
+                            text: modelData.type.toUpperCase()
+                            variant: modelData.type === "flatpak" ? "secondary" : "primary"
+                        }
+
+                        MochaDS.Button {
+                            icon: "trash-2"
+                            variant: "ghost"
+                            size: "sm"
+                            onClicked: {
+                                window.toggleBatchApp(modelData);
+                            }
+                        }
+
+                    }
+
+                }
+
+            }
+
+            Text {
+                text: qsTr("Nenhum aplicativo selecionado.")
+                font.family: MochaDS.Theme.typography.family
+                font.pixelSize: MochaDS.Theme.typography.sizeMd
+                color: MochaDS.Theme.colors.subtext0
+                visible: window.selectedBatchApps.length === 0
+                horizontalAlignment: Text.AlignHCenter
+                Layout.fillWidth: true
+                Layout.topMargin: 20
+            }
+
+        }
+
+    }
+
+    MochaDS.Drawer {
+        id: batchUninstallDrawer
+
+        title: qsTr("Fila de Desinstalação")
+        subtitle: qsTr("Revise os aplicativos selecionados antes de desinstalar em lote.")
+        position: "right"
+        size: 400
+        footer: [
+            RowLayout {
+                width: parent.width
+                height: parent.height
+                implicitHeight: 48
+                spacing: MochaDS.Theme.spacing.md
+
+                MochaDS.Button {
+                    text: qsTr("Limpar Seleção")
+                    variant: "outline"
+                    Layout.fillWidth: true
+                    onClicked: {
+                        window.clearBatchUninstallApps();
+                        batchUninstallDrawer.open = false;
+                    }
+                }
+
+                MochaDS.Button {
+                    text: qsTr("Desinstalar Selecionados")
+                    variant: "danger"
+                    Layout.fillWidth: true
+                    onClicked: {
+                        batchUninstallDrawer.open = false;
+                        window.startBatchUninstallation();
+                    }
+                }
+
+            }
+        ]
+
+        ColumnLayout {
+            width: parent.width
+            spacing: MochaDS.Theme.spacing.md
+
+            Repeater {
+                model: window.selectedBatchUninstallApps
+
+                delegate: Rectangle {
+                    Layout.fillWidth: true
+                    height: 60
+                    color: MochaDS.Theme.colors.surface0
+                    radius: MochaDS.Theme.geometry.radiusMd
+                    border.color: MochaDS.Theme.colors.surface1
+                    border.width: 1
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: MochaDS.Theme.spacing.md
+                        spacing: MochaDS.Theme.spacing.sm
+
+                        AppIcon {
+                            width: 36
+                            height: 36
+                            iconSource: modelData.icon || ""
+                            packageName: modelData.name
+                        }
+
+                        Column {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            Text {
+                                text: modelData.title
+                                font.family: MochaDS.Theme.typography.familyBold
+                                font.pixelSize: MochaDS.Theme.typography.sizeMd
+                                color: MochaDS.Theme.colors.text
+                                elide: Text.ElideRight
+                                width: parent.width
+                            }
+
+                            Text {
+                                text: modelData.name
+                                font.family: MochaDS.Theme.typography.family
+                                font.pixelSize: MochaDS.Theme.typography.sizeXs
+                                color: MochaDS.Theme.colors.subtext0
+                                elide: Text.ElideRight
+                                width: parent.width
+                            }
+
+                        }
+
+                        MochaDS.Badge {
+                            text: modelData.type.toUpperCase()
+                            variant: modelData.type === "flatpak" ? "secondary" : "primary"
+                        }
+
+                        MochaDS.Button {
+                            icon: "trash-2"
+                            variant: "ghost"
+                            size: "sm"
+                            onClicked: {
+                                window.toggleBatchUninstallApp(modelData);
+                            }
+                        }
+
+                    }
+
+                }
+
+            }
+
+            Text {
+                text: qsTr("Nenhum aplicativo selecionado.")
+                font.family: MochaDS.Theme.typography.family
+                font.pixelSize: MochaDS.Theme.typography.sizeMd
+                color: MochaDS.Theme.colors.subtext0
+                visible: window.selectedBatchUninstallApps.length === 0
+                horizontalAlignment: Text.AlignHCenter
+                Layout.fillWidth: true
+                Layout.topMargin: 20
+            }
+
+        }
+
+    }
+
     // 5. Modal: Terminal Log Console Overlay
     MochaDS.Modal {
         id: terminalModal
 
         title: isActionRunning ? qsTr("%1 em Andamento...").arg(currentAction) : (actionSuccess ? qsTr("%1 Concluído").arg(currentAction) : qsTr("Falha na %1").arg(currentAction))
         size: "lg"
-
         onOpenChanged: {
             if (open) {
                 isActionRunning = true;
                 actionSuccess = true;
+            } else {
+                if (isActionRunning) {
+                    backend.cancelActiveOperation();
+                    isActionRunning = false;
+                    isBatchRunning = false;
+                    isBatchUninstallRunning = false;
+                    toasts.warning(qsTr("Operação cancelada pelo usuário."), qsTr("Cancelado"));
+                }
             }
         }
+        footer: [
+            RowLayout {
+                width: parent.width
+
+                Item {
+                    Layout.fillWidth: true
+                }
+
+                MochaDS.Button {
+                    text: qsTr("Fechar")
+                    variant: actionSuccess ? "primary" : "danger"
+                    size: "md"
+                    visible: !isActionRunning
+                    onClicked: {
+                        terminalModal.open = false;
+                    }
+                }
+
+            }
+        ]
 
         ColumnLayout {
             width: parent.width
@@ -664,26 +962,6 @@ ApplicationWindow {
             }
 
         }
-
-        footer: [
-            RowLayout {
-                width: parent.width
-
-                Item {
-                    Layout.fillWidth: true
-                }
-
-                MochaDS.Button {
-                    text: qsTr("Fechar")
-                    variant: actionSuccess ? "primary" : "danger"
-                    size: "md"
-                    visible: !isActionRunning
-                    onClicked: {
-                        terminalModal.open = false;
-                    }
-                }
-            }
-        ]
 
     }
 
