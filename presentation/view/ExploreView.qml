@@ -88,7 +88,6 @@ Flickable {
                     SearchAppCard {
                         width: parent.width
                         appData: modelData
-                        height: parent.height
                         onDetailsClicked: {
                             window.selectedApp = modelData;
                             window.appDetailModal.open = true;

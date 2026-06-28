@@ -13,25 +13,44 @@ Item {
     property var aurUpdates: []
     property bool updatesLoading: false
     property string viewMode: "list" // "list" or "grid"
+
+    // Dynamic tab configuration based on backend settings
+    property bool aurEnabled: false
+    property bool flatpakEnabled: false
+    property var tabModels: []
+    property var tabCategories: []
+
+    function buildTabs() {
+        aurEnabled = backend.getConfigBool("enable_aur");
+        flatpakEnabled = backend.getConfigBool("enable_flatpak");
+        var models = [];
+        var cats = [];
+        models.push(qsTr("Pacman (%1)").arg(pacmanUpdates.length));
+        cats.push("pacman");
+        if (aurEnabled) {
+            models.push(qsTr("AUR (%1)").arg(aurUpdates.length));
+            cats.push("aur");
+        }
+        if (flatpakEnabled) {
+            models.push(qsTr("Flatpak (%1)").arg(flatpakUpdates.length));
+            cats.push("flatpak");
+        }
+        tabModels = models;
+        tabCategories = cats;
+        if (updateTabs.currentIndex >= cats.length)
+            updateTabs.currentIndex = 0;
+    }
+
     // Active model based on tab index
     readonly property var activeModel: {
-        if (updateTabs.currentIndex === 0)
+        var cat = tabCategories[updateTabs.currentIndex] || "pacman";
+        if (cat === "pacman")
             return pacmanUpdates;
-
-        if (updateTabs.currentIndex === 1)
+        if (cat === "aur")
             return aurUpdates;
-
         return flatpakUpdates;
     }
-    readonly property string activeCategoryName: {
-        if (updateTabs.currentIndex === 0)
-            return "pacman";
-
-        if (updateTabs.currentIndex === 1)
-            return "aur";
-
-        return "flatpak";
-    }
+    readonly property string activeCategoryName: tabCategories[updateTabs.currentIndex] || "pacman"
 
     function refresh() {
         updatesLoading = true;
@@ -70,6 +89,7 @@ Item {
             flatpakUpdates = flt;
             aurUpdates = aur;
             updatesLoading = false;
+            buildTabs();
         }
     }
 
@@ -101,7 +121,7 @@ Item {
                 MochaDS.Tabs {
                     id: updateTabs
 
-                    model: [qsTr("Pacman (%1)").arg(pacmanUpdates.length), qsTr("AUR (%1)").arg(aurUpdates.length), qsTr("Flatpak (%1)").arg(flatpakUpdates.length)]
+                    model: root.tabModels
                     currentIndex: 0
                     variant: "segmented"
                     Layout.alignment: Qt.AlignVCenter

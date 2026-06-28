@@ -36,6 +36,21 @@ use crate::domain::usecases::{
     uninstall_package::UninstallPackageUseCase,
 };
 
+fn send_notification(title: &str, body: &str) {
+    #[cfg(target_os = "linux")]
+    {
+        let _ = notify_rust::Notification::new()
+            .summary(title)
+            .body(body)
+            .icon("system-software-install")
+            .appname("Arch Store")
+            .timeout(notify_rust::Timeout::Milliseconds(5000))
+            .show();
+    }
+    let _ = title;
+    let _ = body;
+}
+
 // ─── Backing Rust struct ──────────────────────────────────────────────────────
 
 pub struct BackendRust {
@@ -67,6 +82,9 @@ pub struct BackendRust {
     dev_cache: Mutex<Option<String>>,
     dev_hero_cache: Mutex<Option<String>>,
     active_process_pid: Arc<Mutex<Option<u32>>>,
+    flatpak_binary_found: bool,
+    aur_helper_found: bool,
+    file_arg: Option<String>,
 }
 
 impl Default for BackendRust {
@@ -107,6 +125,11 @@ impl Default for BackendRust {
         let group_uc = Arc::new(GetGroupPackagesUseCase::new(alpm_repo.clone()));
         let launch_uc = Arc::new(LaunchPackageUseCase::new(alpm_repo.clone(), flatpak_repo.clone()));
 
+        let flatpak_found = which("flatpak");
+        let aur_found = which("yay") || which("paru");
+
+        let file_arg = std::env::var("ARCH_STORE_FILE_ARG").ok();
+
         Self {
             alpm_repo, aur_repo, flatpak_repo, appstream_repo,
             search_uc, installed_uc, install_uc, uninstall_uc,
@@ -123,6 +146,9 @@ impl Default for BackendRust {
             dev_cache: Mutex::new(None),
             dev_hero_cache: Mutex::new(None),
             active_process_pid: Arc::new(Mutex::new(None)),
+            flatpak_binary_found: flatpak_found,
+            aur_helper_found: aur_found,
+            file_arg,
         }
     }
 }
@@ -222,6 +248,22 @@ pub mod ffi {
 
         #[qinvokable]
         fn cancelActiveOperation(self: Pin<&mut Backend>);
+
+        // ── Arquivos Locais ────────────────────────────────────────────────────
+        /// Instala um arquivo local (.pkg.tar.zst ou .flatpakref)
+        #[qinvokable]
+        fn installLocalFile(self: Pin<&mut Backend>, file_path: QString);
+
+        /// Retorna o caminho do arquivo passado como argumento CLI (se houver)
+        #[qinvokable]
+        fn getFileArg(self: Pin<&mut Backend>) -> QString;
+
+        // ── Dependências do Sistema ────────────────────────────────────────────
+        #[qinvokable]
+        fn isFlatpakInstalled(self: Pin<&mut Backend>) -> bool;
+
+        #[qinvokable]
+        fn isAurHelperInstalled(self: Pin<&mut Backend>) -> bool;
 
         // ── Config ────────────────────────────────────────────────────────────
         #[qinvokable]
@@ -347,6 +389,7 @@ fn stream_command(
                     b.as_mut().logReceived(QString::from(msg.as_str()));
                     b.as_mut().actionFinished(false);
                 });
+                send_notification("Arch Store", "Erro ao executar comando");
                 return;
             }
         };
@@ -394,6 +437,12 @@ fn stream_command(
         let _ = qt_thread.queue(move |mut b| {
             b.as_mut().actionFinished(success);
         });
+
+        if success {
+            send_notification("Arch Store", "Operação concluída com sucesso!");
+        } else {
+            send_notification("Arch Store", "A operação falhou. Verifique os logs.");
+        }
     });
 }
 
@@ -596,15 +645,16 @@ impl ffi::Backend {
         let qt_thread = self.qt_thread();
         let rt = self.rt.clone();
         let install_uc = self.install_uc.clone();
+        let config = self.config.lock().unwrap().clone();
         let (pt, pn) = (pkg_type.to_string(), pkg_name.to_string());
         let active_pid = self.active_process_pid.clone();
 
         std::thread::spawn(move || {
-            if let Some(cmd) = rt.block_on(install_uc.execute(&pt, &pn)) {
+            if let Some(cmd) = rt.block_on(install_uc.execute(&pt, &pn, &config)) {
                 stream_command(cmd, qt_thread, active_pid);
             } else {
                 let _ = qt_thread.queue(|mut b| {
-                    b.as_mut().logReceived(QString::from("Tipo de pacote desconhecido"));
+                    b.as_mut().logReceived(QString::from("Tipo de pacote desabilitado nas configurações ou desconhecido"));
                     b.as_mut().actionFinished(false);
                 });
             }
@@ -616,15 +666,16 @@ impl ffi::Backend {
         let qt_thread = self.qt_thread();
         let rt = self.rt.clone();
         let uninstall_uc = self.uninstall_uc.clone();
+        let config = self.config.lock().unwrap().clone();
         let (pt, pn) = (pkg_type.to_string(), pkg_name.to_string());
         let active_pid = self.active_process_pid.clone();
 
         std::thread::spawn(move || {
-            if let Some(cmd) = rt.block_on(uninstall_uc.execute(&pt, &pn)) {
+            if let Some(cmd) = rt.block_on(uninstall_uc.execute(&pt, &pn, &config)) {
                 stream_command(cmd, qt_thread, active_pid);
             } else {
                 let _ = qt_thread.queue(|mut b| {
-                    b.as_mut().logReceived(QString::from("Tipo de pacote desconhecido"));
+                    b.as_mut().logReceived(QString::from("Tipo de pacote desabilitado nas configurações ou desconhecido"));
                     b.as_mut().actionFinished(false);
                 });
             }
@@ -729,12 +780,51 @@ impl ffi::Backend {
         }
         let _ = save_config(&cfg);
     }
+
+    // ── Arquivos Locais ───────────────────────────────────────────────────────
+
+    fn installLocalFile(self: Pin<&mut Self>, file_path: QString) {
+        let path = file_path.to_string();
+        let qt_thread = self.qt_thread();
+        let active_pid = self.active_process_pid.clone();
+
+        std::thread::spawn(move || {
+            let cmd: Vec<String> = if path.ends_with(".pkg.tar.zst") || path.ends_with(".pkg.tar.xz") {
+                vec!["pkexec".into(), "pacman".into(), "-U".into(), "--noconfirm".into(), path.clone()]
+            } else if path.ends_with(".flatpakref") {
+                vec!["sh".into(), "-c".into(), format!(
+                    "flatpak install --user -y '{}'",
+                    path
+                )]
+            } else {
+                let _ = qt_thread.queue(move |mut b| {
+                    b.as_mut().logReceived(QString::from(format!("Tipo de arquivo não suportado: {}", path).as_str()));
+                    b.as_mut().actionFinished(false);
+                });
+                return;
+            };
+            stream_command(cmd, qt_thread, active_pid);
+        });
+    }
+
+    fn getFileArg(self: Pin<&mut Self>) -> QString {
+        QString::from(self.file_arg.as_deref().unwrap_or(""))
+    }
+
+    fn isFlatpakInstalled(self: Pin<&mut Self>) -> bool {
+        self.flatpak_binary_found
+    }
+
+    fn isAurHelperInstalled(self: Pin<&mut Self>) -> bool {
+        self.aur_helper_found
+    }
 }
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
 fn which(cmd: &str) -> bool {
-    std::process::Command::new("which").arg(cmd)
-        .output().map(|o| o.status.success()).unwrap_or(false)
+    std::env::var_os("PATH")
+        .map(|path| std::env::split_paths(&path).any(|dir| dir.join(cmd).exists()))
+        .unwrap_or(false)
 }
 

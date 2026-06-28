@@ -4,9 +4,11 @@ mod domain;
 mod presentation;
 
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QString, QUrl};
+use std::ffi::CString;
 
 extern "C" {
     fn register_system_icon_provider(engine_ptr: *mut std::ffi::c_void);
+    fn setup_qt_translator(app_ptr: *mut std::ffi::c_void, locale_dir: *const std::ffi::c_char);
 }
 
 fn main() {
@@ -18,12 +20,30 @@ fn main() {
         eprintln!("[arch-store] starting backend...");
     }
 
+    // Processa argumentos de linha de comando
+    let args: Vec<String> = std::env::args().collect();
+    let file_arg = args.iter().skip(1).find(|a| !a.starts_with('-'));
+    if let Some(path) = file_arg {
+        // Se um caminho de arquivo foi passado, armazena para o backend usar depois
+        std::env::set_var("ARCH_STORE_FILE_ARG", path);
+    }
+
     // Qt application
     let mut app = QGuiApplication::new();
     if let Some(mut app_pinned) = app.as_mut() {
         app_pinned.as_mut().set_application_name(&QString::from("Arch Store"));
         app_pinned.as_mut().set_application_version(&QString::from(env!("CARGO_PKG_VERSION")));
         app_pinned.as_mut().set_organization_name(&QString::from("arch-store"));
+
+        // Configura o tradutor Qt baseado no locale do sistema
+        let locale_dir = resolve_locale_path();
+        let c_locale_dir = CString::new(locale_dir).unwrap_or_default();
+        let raw_app = unsafe {
+            app_pinned.as_mut().get_unchecked_mut() as *mut QGuiApplication as *mut std::ffi::c_void
+        };
+        unsafe {
+            setup_qt_translator(raw_app, c_locale_dir.as_ptr());
+        }
     }
 
     // QML engine
@@ -125,4 +145,32 @@ fn resolve_qml_modules_path() -> String {
     }
 
     "qml_modules".to_string()
+}
+
+/// Localiza o diretório de traduções (locale) buscando em locais comuns.
+fn resolve_locale_path() -> String {
+    let candidates = [
+        "../locale",
+        "locale",
+        "/usr/share/arch-store/locale",
+    ];
+
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(exe_dir) = exe.parent() {
+            for c in &candidates {
+                let full = exe_dir.join(c);
+                if full.exists() {
+                    return full.to_string_lossy().to_string();
+                }
+            }
+        }
+    }
+
+    for c in &candidates {
+        if std::path::Path::new(c).exists() {
+            return c.to_string();
+        }
+    }
+
+    "locale".to_string()
 }

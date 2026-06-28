@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use crate::domain::repositories::PackageRepository;
+use crate::config::AppConfig;
 
 pub struct InstallPackageUseCase {
     pub alpm_repo: Arc<dyn PackageRepository>,
@@ -16,11 +17,23 @@ impl InstallPackageUseCase {
         Self { alpm_repo, aur_repo, flatpak_repo }
     }
 
-    pub async fn execute(&self, pkg_type: &str, pkg_name: &str) -> Option<Vec<String>> {
+    pub async fn execute(&self, pkg_type: &str, pkg_name: &str, config: &AppConfig) -> Option<Vec<String>> {
         match pkg_type {
             "pacman" => Some(self.alpm_repo.get_install_command(pkg_name).await),
-            "aur"    => Some(self.aur_repo.get_install_command(pkg_name).await),
-            "flatpak" => Some(self.flatpak_repo.get_install_command(pkg_name).await),
+            "aur"    => {
+                if config.enable_aur {
+                    Some(self.aur_repo.get_install_command(pkg_name).await)
+                } else {
+                    None
+                }
+            }
+            "flatpak" => {
+                if config.enable_flatpak {
+                    Some(self.flatpak_repo.get_install_command(pkg_name).await)
+                } else {
+                    None
+                }
+            }
             _ => None,
         }
     }

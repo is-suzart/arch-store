@@ -150,10 +150,8 @@ impl PackageRepository for AurPackageRepository {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 fn which(cmd: &str) -> bool {
-    std::process::Command::new("which")
-        .arg(cmd)
-        .output()
-        .map(|o| o.status.success())
+    std::env::var_os("PATH")
+        .map(|path| std::env::split_paths(&path).any(|dir| dir.join(cmd).exists()))
         .unwrap_or(false)
 }
 

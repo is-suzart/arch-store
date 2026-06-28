@@ -10,6 +10,9 @@ Flickable {
     contentHeight: mainLayout.implicitHeight + MochaDS.Theme.spacing.xxl
     clip: true
 
+    property bool flatpakBinaryFound: false
+    property bool aurHelperFound: false
+
     // Load configuration values from backend
     function loadConfig() {
         var flavor = backend.getConfigStr("theme_flavor");
@@ -22,6 +25,15 @@ Flickable {
         } else {
             themeModeGroup.currentIndex = 0;
         }
+
+        flatpakBinaryFound = backend.isFlatpakInstalled();
+        aurHelperFound = backend.isAurHelperInstalled();
+
+        // Auto-disable sources if binary not found
+        if (!flatpakBinaryFound)
+            backend.setConfigBool("enable_flatpak", false);
+        if (!aurHelperFound)
+            backend.setConfigBool("enable_aur", false);
         
         aurToggle.checked = backend.getConfigBool("enable_aur");
         flatpakToggle.checked = backend.getConfigBool("enable_flatpak");
@@ -287,10 +299,18 @@ Flickable {
                             font.pixelSize: MochaDS.Theme.typography.sizeSm
                             color: MochaDS.Theme.colors.subtext0
                         }
+                        Text {
+                            text: aurHelperFound ? qsTr("✓ yay/paru detectado") : qsTr("✗ Nenhum helper AUR (yay/paru) encontrado no sistema")
+                            font.family: MochaDS.Theme.typography.family
+                            font.pixelSize: MochaDS.Theme.typography.sizeXs
+                            color: aurHelperFound ? MochaDS.Theme.colors.green : MochaDS.Theme.colors.red
+                            visible: true
+                        }
                     }
 
                     MochaDS.ToggleButton {
                         id: aurToggle
+                        enabled: aurHelperFound
                         onToggled: function(state) {
                             backend.setConfigBool("enable_aur", state);
                             toasts.info(qsTr("Suporte ao AUR %1").arg(state ? qsTr("habilitado") : qsTr("desabilitado")), qsTr("Configuração salva"));
@@ -324,10 +344,18 @@ Flickable {
                             font.pixelSize: MochaDS.Theme.typography.sizeSm
                             color: MochaDS.Theme.colors.subtext0
                         }
+                        Text {
+                            text: flatpakBinaryFound ? qsTr("✓ Flatpak detectado") : qsTr("✗ Flatpak não encontrado no sistema")
+                            font.family: MochaDS.Theme.typography.family
+                            font.pixelSize: MochaDS.Theme.typography.sizeXs
+                            color: flatpakBinaryFound ? MochaDS.Theme.colors.green : MochaDS.Theme.colors.red
+                            visible: true
+                        }
                     }
 
                     MochaDS.ToggleButton {
                         id: flatpakToggle
+                        enabled: flatpakBinaryFound
                         onToggled: function(state) {
                             backend.setConfigBool("enable_flatpak", state);
                             toasts.info(qsTr("Suporte ao Flatpak %1").arg(state ? qsTr("habilitado") : qsTr("desabilitado")), qsTr("Configuração salva"));

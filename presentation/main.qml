@@ -256,6 +256,14 @@ MochaDS.ApplicationWindow {
         if (check_updates)
             updatesView.refresh();
 
+        // Handle file argument from CLI (opening .pkg or .flatpakref)
+        var fileArg = backend.getFileArg();
+        if (fileArg && fileArg.length > 0) {
+            window.consoleLog = "";
+            window.currentAction = qsTr("Instalação de Arquivo Local");
+            window.terminalModal.open = true;
+            backend.installLocalFile(fileArg);
+        }
     }
 
     Backend {
@@ -287,16 +295,16 @@ MochaDS.ApplicationWindow {
     // Connect to Backend Signals
     Connections {
         target: backend
-        onLogReceived: {
+        function onLogReceived(line) {
             consoleLog += line + "\n";
         }
-        onSearchResultsReady: {
+        function onSearchResultsReady(results) {
             searchResults = JSON.parse(results);
         }
-        onSearchLoadingChanged: {
+        function onSearchLoadingChanged(loading) {
             searchLoading = loading;
         }
-        onActionFinished: {
+        function onActionFinished(success) {
             searchLoading = false;
             window.actionSuccess = success;
             if (window.isBatchRunning) {

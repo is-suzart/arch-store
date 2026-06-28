@@ -158,6 +158,7 @@ fn find_app_id_by_pkgname(pkg_name: &str) -> Option<String> {
 
 pub struct AppStreamFeaturedRepository {
     alpm_repo: std::sync::Arc<AlpmPackageRepository>,
+    #[allow(dead_code)]
     flatpak_repo: std::sync::Arc<FlatpakPackageRepository>,
     data_dir: PathBuf,
 }

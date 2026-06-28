@@ -44,7 +44,6 @@ MochaDS.Sidebar {
 
     //anchors.verticalCenter: parent.verticalCenter
     height: parent.height
-    anchors.fill: parentfill
     variant: "floated"
     expandedWidth: 285
 
