@@ -9,6 +9,7 @@ Flickable {
 
     property var heroApps: []
     property bool loading: false
+    property bool flatpakEnabled: false
 
     function refreshFeatured() {
         loading = true;
@@ -21,7 +22,9 @@ Flickable {
         repeat: false
         onTriggered: {
             featuredGrid.featuredApps = JSON.parse(backend.getFeaturedPackages());
-            popularGrid.popularApps = JSON.parse(backend.getPopularPackages());
+            if (flatpakEnabled) {
+                popularGrid.popularApps = JSON.parse(backend.getPopularPackages());
+            }
             heroApps = JSON.parse(backend.getHeroApps());
             loading = false;
         }
@@ -30,7 +33,18 @@ Flickable {
     contentHeight: exploreContent.height + MochaDS.Theme.spacing.xxl
     clip: true
     Component.onCompleted: {
-        refreshFeatured();
+        flatpakEnabled = backend.getConfigBool("enable_flatpak");
+        featuredGrid.featuredApps = JSON.parse(backend.getFeaturedPackages());
+        if (flatpakEnabled) {
+            popularGrid.popularApps = JSON.parse(backend.getPopularPackages());
+        }
+        heroApps = JSON.parse(backend.getHeroApps());
+    }
+    onVisibleChanged: {
+        if (visible) {
+            flatpakEnabled = backend.getConfigBool("enable_flatpak");
+            refreshFeatured();
+        }
     }
 
     Column {
@@ -107,6 +121,7 @@ Flickable {
             font.pixelSize: MochaDS.Theme.typography.sizeXl
             color: MochaDS.Theme.colors.text
             leftPadding: MochaDS.Theme.spacing.xs
+            visible: flatpakEnabled
         }
 
         MochaDS.CozyGrid {
@@ -117,6 +132,7 @@ Flickable {
             width: parent.width
             mobile: false
             model: popularGrid.popularApps
+            visible: flatpakEnabled
 
             delegate: Component {
                 MochaDS.CozyGridCol {

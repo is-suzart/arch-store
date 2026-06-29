@@ -8,5 +8,6 @@
     "org.blender.Blender",
     "com.valvesoftware.Steam",
     "org.libreoffice.LibreOffice",
-    "org.telegram.desktop"
+    "org.telegram.desktop",
+    "audacity"
 ]

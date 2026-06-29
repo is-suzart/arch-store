@@ -344,7 +344,7 @@ impl AppStreamFeaturedRepository {
                 }
             }
             if icon.is_empty() {
-                icon = app_id.clone();
+                icon = pkg_name_opt.clone().unwrap_or_else(|| app_id.clone());
             }
 
             let (name, pkg_type, installed, installed_version, version) = if let Some(pkg_name) = pkg_name_opt {
@@ -443,10 +443,11 @@ impl FeaturedRepository for AppStreamFeaturedRepository {
             "org.gimp.GIMP", "org.videolan.VLC", "org.inkscape.Inkscape",
             "org.blender.Blender", "com.valvesoftware.Steam",
             "org.libreoffice.LibreOffice", "org.telegram.desktop",
+            "audacity",
         ]);
         let futures: Vec<_> = ids.iter().map(|id| self.resolve_package(id)).collect();
         let resolved = futures_util::future::join_all(futures).await;
-        resolved.into_iter().flatten().collect()
+        resolved.into_iter().flatten().filter(|p| p.pkg_type == "pacman").collect()
     }
 
     async fn get_gaming_packages(&self) -> Vec<Package> {
@@ -478,16 +479,17 @@ impl FeaturedRepository for AppStreamFeaturedRepository {
 
     async fn get_hero_apps(&self) -> Vec<HeroApp> {
         let hero_ids = [
-            ("com.valvesoftware.Steam",     "#c6d0f5", "#1b2838"),
-            ("org.libreoffice.LibreOffice", "#c6d0f5", "#18A303"),
-            ("net.lutris.Lutris",           "#f4b8e4", "#cc5500"),
-            ("com.heroicgameslauncher.hgl", "#ac9aac", "#1c202c"),
-            ("com.visualstudio.code",       "#c6d0f5", "#0078d4"),
-            ("org.gimp.GIMP",              "#f4b8e4", "#4e3e6e"),
+            ("com.valvesoftware.Steam",        "#c6d0f5", "#1b2838"),
+            ("org.libreoffice.LibreOffice",    "#c6d0f5", "#18A303"),
+            ("org.kde.kdenlive",               "#f4b8e4", "#cc5500"),
+            ("org.inkscape.Inkscape",          "#f4b8e4", "#4e3e6e"),
+            ("org.gimp.GIMP",                  "#f4b8e4", "#4e3e6e"),
+            ("com.visualstudio.code",          "#c6d0f5", "#0078d4"),
+            ("org.audacityteam.Audacity",     "#c6d0f5", "#1b2838"),
         ];
         let futures: Vec<_> = hero_ids.iter().map(|(id, fl, fd)| self.resolve_hero(id, fl, fd)).collect();
         let resolved = futures_util::future::join_all(futures).await;
-        resolved.into_iter().flatten().collect()
+        resolved.into_iter().flatten().filter(|p| p.pkg_type == "pacman").collect()
     }
 
     async fn get_gaming_hero_apps(&self) -> Vec<HeroApp> {
